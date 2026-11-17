@@ -1,6 +1,7 @@
 // jogo.js · A "tela": desenha as grelhas e responde ao mouse e ao dedo.
 // Quem decide se a jogada vale é sempre o regras.js. Aqui só mostramos.
 //
+// Etapa 3: cada grelha mostra a bandeja (próxima camada) embaixo.
 // Etapa 2: além de "tocar e tocar", agora dá pra ARRASTAR.
 // Usamos Pointer Events: um só jeito de ouvir mouse, dedo e caneta.
 // (Antes existiam eventos separados: mouse* para o mouse e touch* para o dedo.)
@@ -34,12 +35,17 @@
   }
 
   // Desenha tudo do zero a partir dos dados: a tela é um "retrato" de `grelhas`.
-  function desenhar() {
+  // Etapa 3: cada grelha vira um "bloco" = grelha (camada da frente)
+  // + bandeja embaixo (a próxima camada, pequena e apagada).
+  function desenhar(animar = []) {
     mesa.innerHTML = "";
-    grelhas.forEach((grelha, g) => {
+    grelhas.forEach((pilha, g) => {
+      const bloco = document.createElement("div");
+      bloco.className = "bloco";
       const div = document.createElement("div");
       div.className = "grelha";
-      grelha.forEach((comida, l) => {
+      if (animar.includes(g)) div.classList.add("subiu"); // a bandeja acabou de subir
+      R.frente(pilha).forEach((comida, l) => {
         const lugar = document.createElement("button");
         lugar.className = "lugar";
         lugar.dataset.g = g; // o endereço fica guardado no próprio botão,
@@ -56,9 +62,32 @@
         lugar.addEventListener("click", () => tocar(g, l));
         div.appendChild(lugar);
       });
-      mesa.appendChild(div);
+      bloco.appendChild(div);
+
+      // A bandeja: mostra a camada de trás (pilha[1]). Se houver mais
+      // camadas escondidas além dela, um selo "+N" avisa quantas.
+      const bandeja = document.createElement("div");
+      bandeja.className = "bandeja";
+      if (pilha.length > 1) {
+        pilha[1].forEach((comida) => {
+          const s = document.createElement("span");
+          s.textContent = comida ? R.COMIDAS[comida] : "";
+          bandeja.appendChild(s);
+        });
+        if (pilha.length > 2) {
+          const selo = document.createElement("b");
+          selo.className = "selo";
+          selo.textContent = "+" + (pilha.length - 2);
+          bandeja.appendChild(selo);
+        }
+        bandeja.setAttribute("aria-label", "próxima camada: " + pilha[1].filter(Boolean).join(", "));
+      } else {
+        bandeja.classList.add("vazia");
+      }
+      bloco.appendChild(bandeja);
+      mesa.appendChild(bloco);
     });
-    const restam = grelhas.flat().filter((c) => c !== null).length;
+    const restam = Object.values(R.contar(grelhas)).reduce((a, b) => a + b, 0);
     contador.textContent = `Jogadas: ${jogadas} · Restam: ${restam}`;
   }
 
@@ -66,7 +95,7 @@
   function tocar(g, l) {
     if (ignorarClique) { ignorarClique = false; return; }
     if (ocupado) return;
-    if (grelhas[g][l] !== null) {          // tocou numa comida: escolhe (ou desescolhe)
+    if (R.frente(grelhas[g])[l] !== null) { // tocou numa comida: escolhe (ou desescolhe)
       escolhida = escolhida && escolhida.g === g && escolhida.l === l ? null : { g, l };
       desenhar();
       return;
@@ -100,7 +129,7 @@
       if (andou < FOLGA) return;           // ainda é um toque
       arraste.fantasma = document.createElement("div");
       arraste.fantasma.className = "fantasma";
-      arraste.fantasma.textContent = R.COMIDAS[grelhas[arraste.g][arraste.l]];
+      arraste.fantasma.textContent = R.COMIDAS[R.frente(grelhas[arraste.g])[arraste.l]];
       document.body.appendChild(arraste.fantasma);
       arraste.botao.classList.add("saindo");
       escolhida = null;
@@ -156,20 +185,24 @@
   // ---------- A JOGADA (igual para tocar e arrastar) ----------
   // O ciclo: SOLTAR → CONFERIR → LIMPAR → FIM?
   function jogar(origem, destino) {
+    const camadasAntes = grelhas[origem.g].length;
     if (!R.mover(grelhas, origem, destino)) { desenhar(); return; }
     jogadas++;
-    desenhar();
-    const g = destino.g;
-    if (R.temTrio(grelhas[g])) {
-      ocupado = true;
-      mesa.children[g].classList.add("trio"); // brilho antes de sumir
-      setTimeout(() => {
-        R.limparSeTrio(grelhas, g);
-        ocupado = false;
-        desenhar();
-        if (R.venceu(grelhas)) aviso.textContent = `🎉 Você venceu em ${jogadas} jogadas!`;
-      }, 450);
-    }
+    // Se a origem perdeu uma camada, foi porque a bandeja subiu: anima ela.
+    desenhar(grelhas[origem.g].length < camadasAntes ? [origem.g] : []);
+    // Quem pode ter formado trio? O destino (recebeu comida) e também a
+    // origem (se a bandeja que subiu já veio com 3 iguais).
+    const comTrio = [destino.g, origem.g].filter((g, i, lista) => lista.indexOf(g) === i && R.temTrio(grelhas[g]));
+    if (comTrio.length === 0) return;
+    ocupado = true;
+    comTrio.forEach((g) => mesa.children[g].querySelector(".grelha").classList.add("trio")); // brilho antes de sumir
+    setTimeout(() => {
+      const subiram = comTrio.filter((g) => grelhas[g].length > 1);
+      comTrio.forEach((g) => R.limparSeTrio(grelhas, g));
+      ocupado = false;
+      desenhar(subiram);
+      if (R.venceu(grelhas)) aviso.textContent = `🎉 Você venceu em ${jogadas} jogadas!`;
+    }, 450);
   }
 
   document.getElementById("recomecar").addEventListener("click", novoJogo);

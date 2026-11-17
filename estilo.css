@@ -116,3 +116,44 @@ h1 { margin: 0; font-size: 1.6rem; text-shadow: 0 2px 0 var(--madeira-escura); }
   #mesa { gap: 10px; }
   .grelha { padding: 6px; gap: 4px; }
 }
+
+/* Etapa 3: camadas. Cada bloco = grelha + bandeja embaixo */
+.bloco { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.bloco .grelha { width: 100%; position: relative; z-index: 1; }
+
+.bandeja {                       /* a próxima camada, pequena e apagada */
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 72%;
+  min-height: 2.1em;
+  margin-top: -4px;              /* encaixa embaixo da grelha */
+  padding: 6px 8px 4px;
+  border-radius: 0 0 10px 10px;
+  background: #f4ede2;
+  box-shadow: 0 3px 0 rgba(0,0,0,.18);
+  font-size: clamp(.9rem, 4.5vw, 1.3rem);
+  text-align: center;
+}
+.bandeja span { opacity: .55; filter: saturate(.6); }
+.bandeja.vazia { visibility: hidden; }   /* guarda o espaço, mas não aparece */
+.bandeja .selo {                 /* "+N": quantas camadas ainda estão escondidas */
+  position: absolute;
+  right: -10px; top: 50%;
+  transform: translateY(-50%);
+  font-size: .7rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--brasa);
+  color: #fff;
+}
+
+/* Animação: a bandeja "sobe" para a grelha */
+.grelha.subiu .lugar:not(.vazio) { animation: subir .35s ease-out; }
+@keyframes subir {
+  from { transform: translateY(28px) scale(.6); opacity: .3; }
+  to   { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .grelha.subiu .lugar { animation: none; }
+}
