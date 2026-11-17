@@ -36,7 +36,7 @@ h1 { margin: 0; font-size: 1.6rem; text-shadow: 0 2px 0 var(--madeira-escura); }
 
 .grelha {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr)); /* minmax(0, ...) deixa encolher sem vazar */
   gap: 6px;
   padding: 10px;
   background: var(--grelha);
@@ -54,6 +54,8 @@ h1 { margin: 0; font-size: 1.6rem; text-shadow: 0 2px 0 var(--madeira-escura); }
 
 .lugar {
   aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;            /* o botão vem com recheio de fábrica que empurrava a 3ª comida pra fora */
   font-size: clamp(1.6rem, 8vw, 2.4rem);
   border: none;
   border-radius: 10px;
@@ -69,6 +71,33 @@ h1 { margin: 0; font-size: 1.6rem; text-shadow: 0 2px 0 var(--madeira-escura); }
 }
 .lugar:focus-visible { outline: 3px solid #ffd84d; }
 
+/* Etapa 2: arrastar */
+.lugar {
+  touch-action: none;      /* o dedo arrasta a comida, não rola a página */
+  user-select: none;       /* não seleciona o emoji como texto */
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.lugar.saindo { opacity: .3; }                 /* o lugar de onde a comida saiu */
+.lugar.alvo {                                   /* o vazio debaixo do dedo */
+  background: rgba(255,216,77,.35);
+  box-shadow: inset 0 0 0 3px #ffd84d;
+}
+.fantasma {                                     /* a comida que segue o dedo */
+  position: fixed;
+  left: 0; top: 0;
+  transform: translate(-50%, -60%) scale(1.25);
+  font-size: clamp(2rem, 10vw, 3rem);
+  pointer-events: none;   /* deixa "enxergar" o lugar que está embaixo dele */
+  filter: drop-shadow(0 8px 6px rgba(0,0,0,.35));
+  z-index: 10;
+}
+
+/* Telas largas (PC): grelhas um pouco maiores */
+@media (min-width: 700px) {
+  #mesa { max-width: 560px; gap: 20px; }
+}
+
 #aviso { min-height: 1.4em; margin: 0; text-align: center; font-weight: 600; }
 
 #recomecar {
@@ -79,4 +108,11 @@ h1 { margin: 0; font-size: 1.6rem; text-shadow: 0 2px 0 var(--madeira-escura); }
   background: var(--madeira-escura);
   color: var(--texto);
   cursor: pointer;
+}
+
+/* Celulares estreitos: menos espaço entre as coisas */
+@media (max-width: 420px) {
+  body { padding: 12px; }
+  #mesa { gap: 10px; }
+  .grelha { padding: 6px; gap: 4px; }
 }
