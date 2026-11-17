@@ -1,6 +1,7 @@
 // jogo.js · A "tela": desenha as grelhas e responde ao mouse e ao dedo.
 // Quem decide se a jogada vale é sempre o regras.js. Aqui só mostramos.
 //
+// Etapa 5: cronômetro (pausa com a aba escondida) e 3 "desfazer" por fase.
 // Etapa 4: fases geradas sozinhas (com saída garantida), "Próxima fase" e progresso salvo.
 // Etapa 3: cada grelha mostra a bandeja (próxima camada) embaixo.
 // Etapa 2: além de "tocar e tocar", agora dá pra ARRASTAR.
@@ -40,18 +41,32 @@
   let arraste;      // modo arrastar: informações do arraste em andamento, ou null
   let ignorarClique = false; // um arraste termina com um "click" falso: pulamos ele
 
+  // ---------- Etapa 5: tempo e desfazer ----------
+  const DESFAZER_POR_FASE = 3;
+  const relogioTela = document.getElementById("relogio");
+  const botaoDesfazer = document.getElementById("desfazer");
+  let receitaAtual;   // a receita da fase (traz o tempo)
+  let tempo;          // segundos que faltam
+  let relogio = null; // o "despertador" que bate a cada 1 segundo (setInterval)
+  let historico;      // pilha de fotografias das grelhas, uma por jogada
+  let desfazeres;     // quantos "desfazer" ainda restam
+  let terminou;       // true quando venceu ou o tempo acabou
+
   // Prepara a fase N. Gerar as fases grandes leva até ~2 segundos, então
   // primeiro mostramos "Preparando..." e só depois (setTimeout) geramos:
   // sem isso, o navegador congelaria antes de conseguir mostrar o aviso.
   function carregarFase(n) {
     fase = n;
     gravarFase(n);
+    pararRelogio();
     titulo.textContent = `Fase ${n}`;
     botaoProxima.hidden = true;
     ocupado = true;
     aviso.textContent = "🔥 Preparando a fase...";
     setTimeout(() => {
-      inicio = R.gerarFase(n).grelhas;
+      const gerada = R.gerarFase(n);
+      inicio = gerada.grelhas;
+      receitaAtual = gerada.receita;
       recomecar();
     }, 30);
   }
@@ -63,9 +78,62 @@
     jogadas = 0;
     ocupado = false;
     arraste = null;
+    historico = [];
+    desfazeres = DESFAZER_POR_FASE;
+    terminou = false;
+    tempo = receitaAtual.tempo;
+    botaoProxima.hidden = true;
     aviso.textContent = "Arraste uma comida até um lugar vazio (ou toque nela e depois no lugar).";
     mesa.classList.toggle("tres", grelhas.length >= 6); // muitas grelhas: 3 por linha
     desenhar();
+    mostrarTempo();
+    iniciarRelogio();
+  }
+
+  // O cronômetro: a cada 1 segundo, tira 1 do tempo.
+  // Se a aba estiver escondida (document.hidden), não conta: é injusto
+  // perder porque foi atender o telefone em outro aplicativo.
+  function iniciarRelogio() {
+    pararRelogio();
+    relogio = setInterval(() => {
+      if (document.hidden || terminou) return;
+      tempo--;
+      mostrarTempo();
+      if (tempo <= 0) perder();
+    }, 1000);
+  }
+  function pararRelogio() {
+    if (relogio) clearInterval(relogio);
+    relogio = null;
+  }
+  function mostrarTempo() {
+    const m = Math.floor(Math.max(tempo, 0) / 60);
+    const s = String(Math.max(tempo, 0) % 60).padStart(2, "0");
+    relogioTela.textContent = `⏱ ${m}:${s}`;
+    relogioTela.classList.toggle("acabando", tempo <= 20); // últimos 20 s: vermelho
+  }
+  function perder() {
+    terminou = true;
+    pararRelogio();
+    if (arraste) { limparArraste(); }
+    escolhida = null;
+    desenhar();
+    aviso.textContent = "⏰ O tempo acabou! Toque em Recomeçar para tentar de novo.";
+  }
+
+  // Desfazer: tira a última fotografia da pilha e volta para ela.
+  // Funciona porque, ANTES de cada jogada, guardamos uma cópia (R.copiar)
+  // das grelhas. É o Ctrl+Z do jogo.
+  function desfazer() {
+    if (ocupado || terminou || historico.length === 0 || desfazeres === 0) return;
+    grelhas = historico.pop();
+    desfazeres--;
+    escolhida = null;
+    desenhar();
+  }
+  function atualizarBotoes() {
+    botaoDesfazer.textContent = `↶ Desfazer (${desfazeres})`;
+    botaoDesfazer.disabled = terminou || historico.length === 0 || desfazeres === 0;
   }
 
   // Desenha tudo do zero a partir dos dados: a tela é um "retrato" de `grelhas`.
@@ -122,13 +190,14 @@
       mesa.appendChild(bloco);
     });
     const restam = Object.values(R.contar(grelhas)).reduce((a, b) => a + b, 0);
-    contador.textContent = `Jogadas: ${jogadas} · Restam: ${restam}`;
+    contador.textContent = `Restam: ${restam}`;
+    atualizarBotoes();
   }
 
   // ---------- MODO TOCAR (da etapa 1, continua valendo) ----------
   function tocar(g, l) {
     if (ignorarClique) { ignorarClique = false; return; }
-    if (ocupado) return;
+    if (ocupado || terminou) return;
     if (R.frente(grelhas[g])[l] !== null) { // tocou numa comida: escolhe (ou desescolhe)
       escolhida = escolhida && escolhida.g === g && escolhida.l === l ? null : { g, l };
       desenhar();
@@ -145,7 +214,7 @@
 
   // 1. APERTAR: só anotamos onde começou. Ainda não sabemos se é toque ou arraste.
   function comecarArraste(e, g, l) {
-    if (ocupado || e.button > 0) return;   // só o botão principal do mouse
+    if (ocupado || terminou || e.button > 0) return; // só o botão principal do mouse
     arraste = { g, l, x0: e.clientX, y0: e.clientY, fantasma: null, alvo: null, botao: e.currentTarget };
     // "Captura": o navegador manda TODOS os movimentos deste dedo pra nós,
     // mesmo quando ele sai de cima do botão.
@@ -220,7 +289,9 @@
   // O ciclo: SOLTAR → CONFERIR → LIMPAR → FIM?
   function jogar(origem, destino) {
     const camadasAntes = grelhas[origem.g].length;
+    const foto = R.copiar(grelhas);           // fotografia ANTES da jogada (para desfazer)
     if (!R.mover(grelhas, origem, destino)) { desenhar(); return; }
+    historico.push(foto);
     jogadas++;
     // Se a origem perdeu uma camada, foi porque a bandeja subiu: anima ela.
     desenhar(grelhas[origem.g].length < camadasAntes ? [origem.g] : []);
@@ -235,8 +306,12 @@
       comTrio.forEach((g) => R.limparSeTrio(grelhas, g));
       ocupado = false;
       desenhar(subiram);
-      if (R.venceu(grelhas)) {
-        aviso.textContent = `🎉 Fase ${fase} completa em ${jogadas} jogadas!`;
+      if (R.venceu(grelhas) && !terminou) {
+        terminou = true;
+        pararRelogio();
+        desenhar();
+        const m = Math.floor(tempo / 60), s = String(tempo % 60).padStart(2, "0");
+        aviso.textContent = `🎉 Fase ${fase} completa em ${jogadas} jogadas, sobrando ${m}:${s}!`;
         gravarFase(fase + 1);         // se fechar o navegador, continua na próxima
         botaoProxima.hidden = false;
         botaoProxima.focus();
@@ -246,6 +321,7 @@
 
   document.getElementById("recomecar").addEventListener("click", () => { if (inicio) recomecar(); });
   botaoProxima.addEventListener("click", () => carregarFase(fase + 1));
+  botaoDesfazer.addEventListener("click", desfazer);
 
   // ?fase=N no endereço abre direto a fase N (útil para testar).
   const pedida = parseInt(new URLSearchParams(location.search).get("fase"), 10);

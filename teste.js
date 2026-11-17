@@ -51,7 +51,7 @@ for (let n = 1; n <= 15; n++) {
     for (const [a, la, b, lb] of f.solucao) { R.mover(jogo, { g: a, l: la }, { g: b, l: lb }); R.limparSeTrio(jogo, b); R.limparSeTrio(jogo, a); }
     confere(`fase ${n}: jogando a solução, vence`, R.venceu(jogo));
   }
-  linhas.push(`  fase ${String(n).padStart(2)}: ${r.tipos} tipos, ${total} comidas, ${r.grelhas} grelhas, ${r.vagas} vagas · solução em ${f.solucao ? f.solucao.length : "?"} jogadas · sorteio nº ${f.tentativa} · ${Date.now() - t} ms`);
+  linhas.push(`  fase ${String(n).padStart(2)}: ${r.tipos} tipos, ${total} comidas, ${r.grelhas} grelhas, ${r.vagas} vagas, ${Math.floor(r.tempo / 60)}:${String(r.tempo % 60).padStart(2, "0")} · solução em ${f.solucao ? f.solucao.length : "?"} jogadas · sorteio nº ${f.tentativa} · ${Date.now() - t} ms`);
 }
 console.log(linhas.join("\n"));
 console.log(`  (15 fases geradas em ${Date.now() - t0} ms)`);
@@ -109,3 +109,12 @@ if (solucao) {
 }
 
 console.log(`${ok} conferências ok · solução encontrada: ${solucao ? solucao.length + " jogadas" : "nenhuma"}`);
+
+// ---- Etapa 5: toda fase mais difícil que a anterior ----
+for (let n = 1; n < 30; n++) {
+  const a = R.receita(n), b = R.receita(n + 1);
+  const pioraAlgo = b.tipos > a.tipos || b.trios > a.trios || b.vagas < a.vagas || b.tempo / b.comidas < a.tempo / a.comidas;
+  const melhoraNada = b.tipos >= a.tipos && b.trios >= a.trios && b.vagas <= a.vagas && b.grelhas === 9;
+  confere(`fase ${n + 1} é mais difícil que a ${n}`, pioraAlgo && melhoraNada);
+}
+console.log(`${ok} conferências ok no total`);

@@ -186,3 +186,11 @@ header p { margin: 4px 0 0; color: var(--texto-suave); }
 #recomecar { background: #fff; color: var(--azul); border: 2px solid var(--azul); }
 #proxima { background: var(--azul); color: #fff; border: 2px solid var(--azul); font-weight: 700; }
 #proxima[hidden] { display: none; }
+
+/* Etapa 5: cronômetro e desfazer */
+#relogio { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--azul); }
+#relogio.acabando { color: #C2410C; animation: piscar 1s steps(2) infinite; }
+@keyframes piscar { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { #relogio.acabando { animation: none; } }
+#desfazer { background: #fff; color: var(--azul); border: 2px solid var(--azul); }
+.botoes button:disabled { opacity: .4; cursor: not-allowed; }

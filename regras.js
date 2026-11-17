@@ -162,15 +162,31 @@
   //   tipos  = quantos tipos de comida diferentes
   //   trios  = quantos trios de cada tipo (3 comidas cada)
   //   grelhas = quantas grelhas
-  //   vagas  = lugares vazios na frente (espaço de manobra: menos = mais difícil)
+  //   vagas  = lugares vazios na frente, no MÍNIMO (espaço de manobra: menos = mais difícil)
+  //   tempo  = segundos do cronômetro (etapa 5)
+  //
+  // Pedido do Eduardo (2026-11-17): SEMPRE 9 grelhas, e TODA fase mais
+  // difícil que a anterior. Cada fase aperta pelo menos um parafuso:
+  //   fase:   1   2   3   4   5   6   7   8   9  10  11  12 ...
+  //   tipos:  5   5   6   6   7   7   8   8   9   9  10  10   (+1 a cada 2 fases)
+  //   trios:  1   1   1   2   2   2   3   3   3   3   3   3   (+1 a cada 3 fases)
+  //   vagas:  6   5   5   4   4   3   3   2   2   2   2   2   (−1 a cada 2 fases)
+  //   e o tempo por comida encolhe um pouco em TODA fase.
   function receita(fase) {
     const nomes = Object.keys(COMIDAS);
-    // Teto de 10 tipos: acima disso o solucionador demora demais para provar a fase.
-    const tipos = Math.min(3 + Math.floor(fase / 2), 10);
-    const trios = fase < 4 ? 1 : fase < 9 ? 2 : 3;
-    const grelhas = Math.min(tipos + 1, 9);
-    const vagas = fase < 6 ? 3 : 2;
-    return { tipos, trios, grelhas, vagas, nomes: nomes.slice(0, tipos) };
+    // Teto de 10 tipos e 3 trios: acima disso o solucionador demora demais para provar a fase.
+    const tipos = Math.min(5 + Math.floor((fase - 1) / 2), 10);
+    const trios = Math.min(1 + Math.floor((fase - 1) / 3), 3);
+    const grelhas = 9;
+    const vagas = Math.max(2, 6 - Math.floor(fase / 2));
+    const comidas = tipos * trios * 3;
+    // Segundos por comida: começa em 6 e cai 7% (do que sobra acima de 1,5) a
+    // cada fase. É uma curva que SEMPRE desce, mas nunca chega a 1,5:
+    // fase 1 = 6 s, fase 10 ≈ 3,8 s, fase 20 ≈ 2,6 s, fase 40 ≈ 1,8 s.
+    // (Um "piso" fixo faria as fases pararem de ficar difíceis: o teste pegou isso.)
+    const porComida = 1.5 + 4.5 * Math.pow(0.93, fase - 1);
+    const tempo = Math.round(comidas * porComida + 30);
+    return { tipos, trios, grelhas, vagas, comidas, tempo, nomes: nomes.slice(0, tipos) };
   }
 
   // Monta uma fase com o sorteio: coloca as comidas na frente (deixando as

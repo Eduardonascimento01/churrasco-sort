@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1>🔥 Churrasco Sort</h1>
-    <p><strong id="fase">Fase 1</strong> · <span id="contador"></span></p>
+    <p><strong id="fase">Fase 1</strong> · <span id="relogio" aria-live="off">⏱ 0:00</span> · <span id="contador"></span></p>
   </header>
 
   <main id="mesa" aria-label="Grelhas"></main>
@@ -17,6 +17,7 @@
   <p id="aviso" role="status"></p>
   <div class="botoes">
     <button id="proxima" class="principal" hidden>Próxima fase ➜</button>
+    <button id="desfazer" disabled>↶ Desfazer (3)</button>
     <button id="recomecar">↻ Recomeçar</button>
   </div>
 
