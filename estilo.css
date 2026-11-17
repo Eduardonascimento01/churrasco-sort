@@ -1,9 +1,12 @@
 :root {
-  --madeira: #b5793f;
-  --madeira-escura: #8a5a2b;
+  /* Mesmas cores da Jogoteca (hub), para combinar com os outros jogos */
+  --fundo: #F5F6F8;
+  --azul: #1E3A8A;
+  --azul-escuro: #172E6E;
+  --azul-claro: #DCE6F8;
+  --texto: #000000;
+  --texto-suave: #5A6170;
   --grelha: #2f2f35;
-  --brasa: #e8622c;
-  --texto: #fff8ee;
 }
 
 * { box-sizing: border-box; }
@@ -12,7 +15,7 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: system-ui, sans-serif;
-  background: var(--madeira);
+  background: var(--fundo);
   color: var(--texto);
   display: flex;
   flex-direction: column;
@@ -22,8 +25,8 @@ body {
 }
 
 header { text-align: center; }
-h1 { margin: 0; font-size: 1.6rem; text-shadow: 0 2px 0 var(--madeira-escura); }
-#contador { margin: 4px 0 0; }
+h1 { margin: 0; font-size: 1.6rem; color: var(--azul); }
+#contador { margin: 4px 0 0; color: var(--texto-suave); }
 
 /* A mesa: as grelhas lado a lado, 2 por linha */
 #mesa {
@@ -67,7 +70,7 @@ h1 { margin: 0; font-size: 1.6rem; text-shadow: 0 2px 0 var(--madeira-escura); }
 .lugar.vazio { background: rgba(0,0,0,.25); }
 .lugar.escolhida {
   transform: translateY(-6px) scale(1.08);
-  background: var(--brasa);
+  background: var(--azul);
 }
 .lugar:focus-visible { outline: 3px solid #ffd84d; }
 
@@ -98,15 +101,15 @@ h1 { margin: 0; font-size: 1.6rem; text-shadow: 0 2px 0 var(--madeira-escura); }
   #mesa { max-width: 560px; gap: 20px; }
 }
 
-#aviso { min-height: 1.4em; margin: 0; text-align: center; font-weight: 600; }
+#aviso { min-height: 1.4em; margin: 0; text-align: center; font-weight: 600; color: var(--azul-escuro); }
 
 #recomecar {
   font-size: 1rem;
   padding: 10px 18px;
   border: none;
   border-radius: 999px;
-  background: var(--madeira-escura);
-  color: var(--texto);
+  background: var(--azul);
+  color: #fff;
   cursor: pointer;
 }
 
@@ -130,7 +133,9 @@ h1 { margin: 0; font-size: 1.6rem; text-shadow: 0 2px 0 var(--madeira-escura); }
   margin-top: -4px;              /* encaixa embaixo da grelha */
   padding: 6px 8px 4px;
   border-radius: 0 0 10px 10px;
-  background: #f4ede2;
+  background: #fff;
+  border: 1px solid #E3E6EB;
+  border-top: none;
   box-shadow: 0 3px 0 rgba(0,0,0,.18);
   font-size: clamp(.9rem, 4.5vw, 1.3rem);
   text-align: center;
@@ -144,7 +149,7 @@ h1 { margin: 0; font-size: 1.6rem; text-shadow: 0 2px 0 var(--madeira-escura); }
   font-size: .7rem;
   padding: 2px 6px;
   border-radius: 999px;
-  background: var(--brasa);
+  background: var(--azul);
   color: #fff;
 }
 
