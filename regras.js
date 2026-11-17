@@ -20,11 +20,20 @@
   const LUGARES = 3;
   const VAZIA = () => [null, null, null];
 
+  // 12 comidas. As fases fáceis usam só as primeiras; as difíceis, mais.
   const COMIDAS = {
-    pimentao: "🫑",
-    coxa: "🍗",
     milho: "🌽",
+    coxa: "🍗",
     espeto: "🍢",
+    pimentao: "🫑",
+    salsicha: "🌭",
+    costela: "🍖",
+    cebola: "🧅",
+    berinjela: "🍆",
+    queijo: "🧀",
+    cogumelo: "🍄",
+    camarao: "🍤",
+    picanha: "🥩",
   };
 
   // Fase da etapa 3, montada à mão: 4 tipos × 3 = 12 comidas em 4 grelhas,
@@ -120,9 +129,150 @@
     return grelhas.map((grelha) => grelha.map((camada) => [...camada]));
   }
 
+  // =====================================================================
+  // ETAPA 4: O JOGO CRIA AS FASES SOZINHO
+  // =====================================================================
+
+  // Sorteio "com semente" (algoritmo mulberry32).
+  // O Math.random() dá números diferentes a cada vez. Este aqui, a partir
+  // do mesmo número inicial (a SEMENTE), dá SEMPRE a mesma sequência.
+  // Assim a "fase 7" é igual para todo mundo e o "Recomeçar" repete a fase.
+  function sorteador(semente) {
+    let s = semente >>> 0;
+    return function () {
+      s = (s + 0x6d2b79f5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296; // número entre 0 e 1
+    };
+  }
+
+  // Embaralha uma lista (algoritmo Fisher-Yates): do fim para o começo,
+  // troca cada item com um sorteado entre os anteriores.
+  function embaralhar(lista, sortear) {
+    for (let i = lista.length - 1; i > 0; i--) {
+      const j = Math.floor(sortear() * (i + 1));
+      [lista[i], lista[j]] = [lista[j], lista[i]];
+    }
+    return lista;
+  }
+
+  // A "receita" de dificuldade de cada fase:
+  //   tipos  = quantos tipos de comida diferentes
+  //   trios  = quantos trios de cada tipo (3 comidas cada)
+  //   grelhas = quantas grelhas
+  //   vagas  = lugares vazios na frente (espaço de manobra: menos = mais difícil)
+  function receita(fase) {
+    const nomes = Object.keys(COMIDAS);
+    // Teto de 10 tipos: acima disso o solucionador demora demais para provar a fase.
+    const tipos = Math.min(3 + Math.floor(fase / 2), 10);
+    const trios = fase < 4 ? 1 : fase < 9 ? 2 : 3;
+    const grelhas = Math.min(tipos + 1, 9);
+    const vagas = fase < 6 ? 3 : 2;
+    return { tipos, trios, grelhas, vagas, nomes: nomes.slice(0, tipos) };
+  }
+
+  // Monta uma fase com o sorteio: coloca as comidas na frente (deixando as
+  // vagas) e o que sobra vai, de 3 em 3, para as bandejas das grelhas.
+  function montar(r, sortear) {
+    const comidas = [];
+    for (const nome of r.nomes)
+      for (let i = 0; i < r.trios * 3; i++) comidas.push(nome);
+    embaralhar(comidas, sortear);
+
+    // Frente: escolhe quais lugares ficam vazios.
+    const totalFrente = r.grelhas * 3;
+    const vazios = new Set(embaralhar([...Array(totalFrente).keys()], sortear).slice(0, r.vagas));
+    const grelhas = [];
+    for (let g = 0; g < r.grelhas; g++) {
+      const frente = [];
+      for (let l = 0; l < 3; l++) {
+        const pos = g * 3 + l;
+        frente.push(vazios.has(pos) || comidas.length === 0 ? null : comidas.pop());
+      }
+      grelhas.push([frente]);
+    }
+
+    // Bandejas: o resto, em camadas de 3, sempre na grelha com MENOS camadas
+    // (empate: sorteia). Assim nenhuma grelha fica com uma torre enorme.
+    while (comidas.length > 0) {
+      const camada = [comidas.pop() ?? null, comidas.pop() ?? null, comidas.pop() ?? null];
+      const menor = Math.min(...grelhas.map((p) => p.length));
+      const candidatas = grelhas.filter((p) => p.length === menor);
+      candidatas[Math.floor(sortear() * candidatas.length)].push(embaralhar(camada, sortear));
+    }
+
+    // Arrumação: uma frente vazia com bandeja atrás não faz sentido; a bandeja sobe.
+    for (const p of grelhas) while (p.length > 1 && camadaVazia(p[0])) p.shift();
+    return grelhas;
+  }
+
+  // O solucionador (veio do teste.js para cá, porque agora o JOGO usa ele).
+  // Busca em profundidade que tenta primeiro as jogadas promissoras e anota
+  // as posições já vistas. Devolve a lista de jogadas, ou null se desistir.
+  function resolver(inicio, limite = 20000) {
+    const vistos = new Set();
+    let visitas = 0;
+    function pontos(antes, depois, a, b, comida) {
+      const f = frente(depois[b]);
+      const iguais = f.filter((x) => x === comida).length;
+      let p = iguais === 3 ? 100 : iguais === 2 ? 20 : 0;              // fechou trio / formou par
+      if (frente(antes[a]).filter((x) => x === comida).length === 2) p -= 15; // desfez um par
+      if (depois[a].length < antes[a].length) p += 5;                 // a bandeja subiu
+      return p;
+    }
+    function busca(gs, caminho) {
+      if (venceu(gs)) return caminho;
+      const k = JSON.stringify(gs);
+      if (vistos.has(k) || ++visitas > limite || caminho.length > 200) return null;
+      vistos.add(k);
+      const opcoes = [];
+      for (let a = 0; a < gs.length; a++)
+        for (let la = 0; la < 3; la++) {
+          const comida = frente(gs[a])[la];
+          if (comida === null) continue;
+          for (let b = 0; b < gs.length; b++) {
+            if (a === b) continue;
+            const lb = frente(gs[b]).indexOf(null);
+            if (lb < 0) continue;
+            const c = copiar(gs);
+            mover(c, { g: a, l: la }, { g: b, l: lb });
+            const p = pontos(gs, c, a, b, comida);
+            limparSeTrio(c, b);
+            limparSeTrio(c, a);
+            opcoes.push({ c, p, jogada: [a, la, b, lb] });
+          }
+        }
+      opcoes.sort((x, y) => y.p - x.p);
+      for (const o of opcoes) {
+        const r = busca(o.c, [...caminho, o.jogada]);
+        if (r) return r;
+      }
+      return null;
+    }
+    return busca(copiar(inicio), []);
+  }
+
+  // Gera a fase N: sorteia, e o solucionador PROVA que tem saída.
+  // Se não achar saída (ou se já começar com um trio pronto), tenta outro
+  // sorteio. É o "montar o quebra-cabeça e conferir antes de entregar".
+  function gerarFase(fase) {
+    const r = receita(fase);
+    for (let tentativa = 0; tentativa < 60; tentativa++) {
+      const grelhas = montar(r, sorteador(fase * 1000 + tentativa));
+      if (grelhas.some(temTrio)) continue;      // trio de graça não tem graça
+      if (!temSolucao(grelhas)) continue;
+      const solucao = resolver(grelhas);
+      if (solucao) return { grelhas, solucao, tentativa, receita: r };
+    }
+    return { grelhas: criarFase(), solucao: null, tentativa: -1, receita: r }; // reserva
+  }
+
   const Regras = {
     LUGARES, COMIDAS, criarFase, frente, camadaVazia, temTrio,
     mover, limparSeTrio, venceu, contar, temSolucao, copiar,
+    sorteador, embaralhar, receita, montar, resolver, gerarFase,
   };
   if (typeof module !== "undefined") module.exports = Regras; // Node (teste.js)
   else window.Regras = Regras;                                // navegador

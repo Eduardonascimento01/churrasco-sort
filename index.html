@@ -9,13 +9,16 @@
 <body>
   <header>
     <h1>🔥 Churrasco Sort</h1>
-    <p id="contador"></p>
+    <p><strong id="fase">Fase 1</strong> · <span id="contador"></span></p>
   </header>
 
   <main id="mesa" aria-label="Grelhas"></main>
 
   <p id="aviso" role="status"></p>
-  <button id="recomecar">↻ Recomeçar</button>
+  <div class="botoes">
+    <button id="proxima" class="principal" hidden>Próxima fase ➜</button>
+    <button id="recomecar">↻ Recomeçar</button>
+  </div>
 
   <script src="regras.js"></script>
   <script src="jogo.js"></script>

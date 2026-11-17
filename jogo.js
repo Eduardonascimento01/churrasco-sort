@@ -1,6 +1,7 @@
 // jogo.js · A "tela": desenha as grelhas e responde ao mouse e ao dedo.
 // Quem decide se a jogada vale é sempre o regras.js. Aqui só mostramos.
 //
+// Etapa 4: fases geradas sozinhas (com saída garantida), "Próxima fase" e progresso salvo.
 // Etapa 3: cada grelha mostra a bandeja (próxima camada) embaixo.
 // Etapa 2: além de "tocar e tocar", agora dá pra ARRASTAR.
 // Usamos Pointer Events: um só jeito de ouvir mouse, dedo e caneta.
@@ -17,6 +18,21 @@
   // pouquinho viraria um "arrastar" sem querer.
   const FOLGA = 8;
 
+  const botaoProxima = document.getElementById("proxima");
+  const titulo = document.getElementById("fase");
+
+  // Etapa 4: em que fase o jogador está. Fica guardado no navegador
+  // (localStorage) para continuar de onde parou. O try/catch protege
+  // navegadores que bloqueiam o armazenamento (ex: aba anônima).
+  function lerFase() {
+    try { return Math.max(1, parseInt(localStorage.getItem("churrasco:fase"), 10) || 1); } catch (_) { return 1; }
+  }
+  function gravarFase(n) {
+    try { localStorage.setItem("churrasco:fase", String(n)); } catch (_) { /* sem problema */ }
+  }
+
+  let fase = lerFase();
+  let inicio;       // a fase como ela começou (para o "Recomeçar")
   let grelhas;      // os dados do jogo (lista de grelhas)
   let escolhida;    // modo tocar: comida tocada, { g, l } ou null
   let jogadas;      // quantas jogadas já fez
@@ -24,13 +40,31 @@
   let arraste;      // modo arrastar: informações do arraste em andamento, ou null
   let ignorarClique = false; // um arraste termina com um "click" falso: pulamos ele
 
-  function novoJogo() {
-    grelhas = R.criarFase();
+  // Prepara a fase N. Gerar as fases grandes leva até ~2 segundos, então
+  // primeiro mostramos "Preparando..." e só depois (setTimeout) geramos:
+  // sem isso, o navegador congelaria antes de conseguir mostrar o aviso.
+  function carregarFase(n) {
+    fase = n;
+    gravarFase(n);
+    titulo.textContent = `Fase ${n}`;
+    botaoProxima.hidden = true;
+    ocupado = true;
+    aviso.textContent = "🔥 Preparando a fase...";
+    setTimeout(() => {
+      inicio = R.gerarFase(n).grelhas;
+      recomecar();
+    }, 30);
+  }
+
+  // Volta a fase atual ao começo, igualzinha (usa a cópia guardada em `inicio`).
+  function recomecar() {
+    grelhas = R.copiar(inicio);
     escolhida = null;
     jogadas = 0;
     ocupado = false;
     arraste = null;
     aviso.textContent = "Arraste uma comida até um lugar vazio (ou toque nela e depois no lugar).";
+    mesa.classList.toggle("tres", grelhas.length >= 6); // muitas grelhas: 3 por linha
     desenhar();
   }
 
@@ -201,10 +235,19 @@
       comTrio.forEach((g) => R.limparSeTrio(grelhas, g));
       ocupado = false;
       desenhar(subiram);
-      if (R.venceu(grelhas)) aviso.textContent = `🎉 Você venceu em ${jogadas} jogadas!`;
+      if (R.venceu(grelhas)) {
+        aviso.textContent = `🎉 Fase ${fase} completa em ${jogadas} jogadas!`;
+        gravarFase(fase + 1);         // se fechar o navegador, continua na próxima
+        botaoProxima.hidden = false;
+        botaoProxima.focus();
+      }
     }, 450);
   }
 
-  document.getElementById("recomecar").addEventListener("click", novoJogo);
-  novoJogo();
+  document.getElementById("recomecar").addEventListener("click", () => { if (inicio) recomecar(); });
+  botaoProxima.addEventListener("click", () => carregarFase(fase + 1));
+
+  // ?fase=N no endereço abre direto a fase N (útil para testar).
+  const pedida = parseInt(new URLSearchParams(location.search).get("fase"), 10);
+  carregarFase(pedida > 0 ? pedida : fase);
 })();

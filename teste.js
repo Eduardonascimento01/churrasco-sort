@@ -30,6 +30,32 @@ R.mover(g, { g: 1, l: 0 }, { g: 0, l: 2 });
 const saiu = R.limparSeTrio(g, 0);
 confere("trio que sobe já pronto também limpa (em cadeia)", saiu === 6 && R.frente(g[0])[0] === "ovo");
 
+// ---- Etapa 4: sorteio com semente e fases geradas ----
+const s1 = R.sorteador(42), s2 = R.sorteador(42);
+confere("mesma semente, mesmos números", s1() === s2() && s1() === s2());
+confere("fase gerada é sempre a mesma", JSON.stringify(R.gerarFase(5).grelhas) === JSON.stringify(R.gerarFase(5).grelhas));
+
+const t0 = Date.now();
+const linhas = [];
+for (let n = 1; n <= 15; n++) {
+  const t = Date.now();
+  const f = R.gerarFase(n);
+  const total = Object.values(R.contar(f.grelhas)).reduce((a, b) => a + b, 0);
+  const r = f.receita;
+  confere(`fase ${n}: tem solução`, f.solucao !== null);
+  confere(`fase ${n}: múltiplo de 3`, R.temSolucao(f.grelhas));
+  confere(`fase ${n}: ${r.tipos * r.trios * 3} comidas`, total === r.tipos * r.trios * 3);
+  confere(`fase ${n}: não começa com trio pronto`, !f.grelhas.some(R.temTrio));
+  if (f.solucao) {
+    const jogo = R.copiar(f.grelhas);
+    for (const [a, la, b, lb] of f.solucao) { R.mover(jogo, { g: a, l: la }, { g: b, l: lb }); R.limparSeTrio(jogo, b); R.limparSeTrio(jogo, a); }
+    confere(`fase ${n}: jogando a solução, vence`, R.venceu(jogo));
+  }
+  linhas.push(`  fase ${String(n).padStart(2)}: ${r.tipos} tipos, ${total} comidas, ${r.grelhas} grelhas, ${r.vagas} vagas · solução em ${f.solucao ? f.solucao.length : "?"} jogadas · sorteio nº ${f.tentativa} · ${Date.now() - t} ms`);
+}
+console.log(linhas.join("\n"));
+console.log(`  (15 fases geradas em ${Date.now() - t0} ms)`);
+
 // ---- O solucionador: prova que a fase TEM saída ----
 // Testar TODAS as jogadas em ordem é lento demais (são milhões de posições).
 // Então fazemos como um jogador esperto: "busca em profundidade" que tenta
