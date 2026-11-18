@@ -2,30 +2,49 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Churrasco Sort</title>
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
-  <header>
+  <header id="topo">
     <h1>🔥 Churrasco Sort <button id="som" class="som" aria-label="Desligar som">🔊</button></h1>
-    <p><strong id="fase">Fase 1</strong> · <span id="relogio" aria-live="off">⏱ 0:00</span> · <span id="contador"></span></p>
+    <p>
+      <strong id="fase">Fase 01</strong> <span id="nivel-nome" class="etiqueta">Médio</span> ·
+      <span id="relogio" aria-live="off">⏱ 0:00</span> · <span id="contador"></span>
+    </p>
   </header>
 
   <main id="mesa" aria-label="Grelhas"></main>
 
-  <div class="poderes" aria-label="Poderes">
+  <div class="poderes" id="poderes" aria-label="Poderes">
     <button id="p-congelar" title="Para o relógio por 10 segundos">❄️ Congelar <b>1</b></button>
     <button id="p-martelo" title="Toque numa comida: 3 dela somem">🔨 Martelo <b>1</b></button>
     <button id="p-juntar" title="Some com 3 da comida mais à vista">✨ Juntar <b>1</b></button>
   </div>
 
   <p id="aviso" role="status"></p>
-  <div class="botoes">
-    <button id="proxima" class="principal" hidden>Próxima fase ➜</button>
+  <div class="botoes" id="botoes">
+    <button id="proxima" hidden>Próxima fase ➜</button>
     <button id="desfazer" disabled>↶ Desfazer (3)</button>
     <button id="recomecar">↻ Recomeçar</button>
+    <button id="abrir-menu">☰ Níveis</button>
   </div>
+
+  <!-- Menu de dificuldade: aparece ao abrir o jogo e no botão "Níveis" -->
+  <section id="menu" class="menu" role="dialog" aria-modal="true" aria-labelledby="menu-titulo" hidden>
+    <div class="cartao">
+      <h2 id="menu-titulo">🔥 Escolha a dificuldade</h2>
+      <div class="niveis">
+        <button data-nivel="facil"><strong>😊 Fácil</strong><small>Mais tempo e mais espaço livre</small></button>
+        <button data-nivel="medio"><strong>🙂 Médio</strong><small>O equilíbrio</small></button>
+        <button data-nivel="dificil"><strong>😈 Difícil</strong><small>Pouco tempo, quase sem espaço</small></button>
+      </div>
+      <p class="dica">Todo nível começa na <strong>fase 01</strong>. A cada fase, fica mais difícil.</p>
+      <div id="continuar"></div>
+      <button id="fechar-menu" class="discreto" hidden>Voltar ao jogo</button>
+    </div>
+  </section>
 
   <script src="regras.js"></script>
   <script src="som.js"></script>

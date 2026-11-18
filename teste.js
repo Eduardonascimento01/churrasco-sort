@@ -110,13 +110,23 @@ if (solucao) {
 
 console.log(`${ok} conferências ok · solução encontrada: ${solucao ? solucao.length + " jogadas" : "nenhuma"}`);
 
-// ---- Etapa 5: toda fase mais difícil que a anterior ----
-for (let n = 1; n < 30; n++) {
-  const a = R.receita(n), b = R.receita(n + 1);
-  const pioraAlgo = b.tipos > a.tipos || b.trios > a.trios || b.vagas < a.vagas || b.tempo / b.comidas < a.tempo / a.comidas;
-  const melhoraNada = b.tipos >= a.tipos && b.trios >= a.trios && b.vagas <= a.vagas && b.grelhas === 9;
-  confere(`fase ${n + 1} é mais difícil que a ${n}`, pioraAlgo && melhoraNada);
+// ---- Etapa 5 (e níveis): toda fase mais difícil que a anterior, em cada nível ----
+for (const nivel of Object.keys(R.NIVEIS)) {
+  let tudoOk = true;
+  for (let n = 1; n < 30; n++) {
+    const a = R.receita(n, nivel), b = R.receita(n + 1, nivel);
+    const pioraAlgo = b.tipos > a.tipos || b.trios > a.trios || b.vagas < a.vagas || b.tempo / b.comidas < a.tempo / a.comidas;
+    const melhoraNada = b.tipos >= a.tipos && b.trios >= a.trios && b.vagas <= a.vagas && b.grelhas === 12;
+    if (!(pioraAlgo && melhoraNada)) { tudoOk = false; console.error('  piorou errado:', nivel, n, '->', n + 1); }
+  }
+  confere(`${nivel}: fases 1 a 30 sempre mais difíceis`, tudoOk);
 }
+for (let n = 1; n <= 20; n++) {
+  const f = R.receita(n, 'facil'), m = R.receita(n, 'medio'), d = R.receita(n, 'dificil');
+  confere(`fase ${n}: fácil tem mais tempo por comida que médio, e médio mais que difícil`, f.tempo / f.comidas > m.tempo / m.comidas && m.tempo / m.comidas > d.tempo / d.comidas);
+  confere(`fase ${n}: fácil tem mais vagas que difícil`, f.vagas > d.vagas);
+}
+confere('fases do fácil e do difícil são diferentes', JSON.stringify(R.gerarFase(3, 'facil').grelhas) !== JSON.stringify(R.gerarFase(3, 'dificil').grelhas));
 console.log(`${ok} conferências ok no total`);
 
 // ---- Etapa 6: poderes ----

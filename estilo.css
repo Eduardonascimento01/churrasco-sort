@@ -6,231 +6,160 @@
   --azul-claro: #DCE6F8;
   --texto: #000000;
   --texto-suave: #5A6170;
+  --borda: #E3E6EB;
   --grelha: #2f2f35;
+  --vermelho: #C2410C;
 }
 
 * { box-sizing: border-box; }
 
+html, body { margin: 0; }
+
 body {
-  margin: 0;
   min-height: 100vh;
-  font-family: system-ui, sans-serif;
+  min-height: 100dvh;           /* "dvh": altura real da tela no celular (descontando a barra do navegador) */
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   background: var(--fundo);
   color: var(--texto);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px;
-  gap: 12px;
+  padding: 10px 12px 14px;
+  gap: 8px;
+  overscroll-behavior: none;    /* sem "puxar para atualizar" no meio do jogo */
 }
 
 header { text-align: center; }
-h1 { margin: 0; font-size: 1.6rem; color: var(--azul); }
-#contador { margin: 4px 0 0; color: var(--texto-suave); }
-
-/* A mesa: as grelhas lado a lado, 2 por linha */
-#mesa {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  width: 100%;
-  max-width: 460px;
+h1 { margin: 0; font-size: clamp(1.2rem, 5vw, 1.6rem); color: var(--azul); }
+header p { margin: 2px 0 0; color: var(--texto-suave); font-size: clamp(.8rem, 3.4vw, 1rem); }
+#fase { color: var(--azul); }
+.etiqueta {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--azul-claro);
+  color: var(--azul);
+  font-size: .85em;
+  font-weight: 600;
 }
+.som { margin-left: 4px; font-size: 1.1rem; vertical-align: middle; border: none; background: none; cursor: pointer; }
+
+/* =====================================================================
+   A MESA: TUDO É MEDIDO A PARTIR DE --lado (o tamanho de 1 lugar, em px).
+   O jogo.js calcula o --lado para as 12 grelhas caberem na tela inteira,
+   seja um PC largo ou um celular em pé. Mudou o --lado, muda tudo junto:
+   é como a "escala" de um mapa.
+   ===================================================================== */
+#mesa {
+  --lado: 56px;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  justify-content: center;
+  column-gap: calc(var(--lado) * .18);
+  row-gap: calc(var(--lado) * .14);
+}
+
+.bloco { display: flex; flex-direction: column; align-items: center; position: relative; }
 
 .grelha {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)); /* minmax(0, ...) deixa encolher sem vazar */
-  gap: 6px;
-  padding: 10px;
+  grid-template-columns: repeat(3, var(--lado));
+  gap: calc(var(--lado) * .06);
+  padding: calc(var(--lado) * .1);
   background: var(--grelha);
-  border-radius: 14px;
-  border-bottom: 6px solid #a8322a;
-  /* as "barras" da grelha */
+  border-radius: calc(var(--lado) * .22);
+  border-bottom: 5px solid #a8322a;
   background-image: repeating-linear-gradient(90deg, transparent 0 10px, rgba(255,255,255,.06) 10px 12px);
-  transition: box-shadow .2s, transform .2s;
+  position: relative;
+  z-index: 1;
+  transition: box-shadow .15s, transform .15s;
 }
-
-.grelha.trio {
-  box-shadow: 0 0 0 4px #ffd84d, 0 0 24px #ffd84d;
-  transform: scale(1.04);
-}
+.grelha.trio { box-shadow: 0 0 0 4px #ffd84d, 0 0 24px #ffd84d; transform: scale(1.04); }
 
 .lugar {
-  aspect-ratio: 1;
-  min-width: 0;
-  padding: 0;            /* o botão vem com recheio de fábrica que empurrava a 3ª comida pra fora */
-  font-size: clamp(1.6rem, 8vw, 2.4rem);
+  width: var(--lado);
+  height: var(--lado);
+  padding: 0;
+  font-size: calc(var(--lado) * .62);
+  line-height: 1;
   border: none;
-  border-radius: 10px;
+  border-radius: calc(var(--lado) * .18);
   background: rgba(255,255,255,.08);
-  cursor: pointer;
-  transition: transform .12s, background .12s;
-}
-.lugar:hover { background: rgba(255,255,255,.16); }
-.lugar.vazio { background: rgba(0,0,0,.25); }
-.lugar.escolhida {
-  transform: translateY(-6px) scale(1.08);
-  background: var(--azul);
-}
-.lugar:focus-visible { outline: 3px solid #ffd84d; }
-
-/* Etapa 2: arrastar */
-.lugar {
-  touch-action: none;      /* o dedo arrasta a comida, não rola a página */
-  user-select: none;       /* não seleciona o emoji como texto */
+  cursor: grab;
+  transition: transform .12s, background .12s, opacity .12s;
+  touch-action: none;          /* o dedo arrasta a comida, não rola a página */
+  user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-.lugar.saindo { opacity: .3; }                 /* o lugar de onde a comida saiu */
-.lugar.alvo {                                   /* o vazio debaixo do dedo */
-  background: rgba(255,216,77,.35);
-  box-shadow: inset 0 0 0 3px #ffd84d;
-}
-.fantasma {                                     /* a comida que segue o dedo */
-  position: fixed;
-  left: 0; top: 0;
-  transform: translate(-50%, -60%) scale(1.25);
-  font-size: clamp(2rem, 10vw, 3rem);
-  pointer-events: none;   /* deixa "enxergar" o lugar que está embaixo dele */
-  filter: drop-shadow(0 8px 6px rgba(0,0,0,.35));
-  z-index: 10;
-}
+.lugar:hover { background: rgba(255,255,255,.16); }
+.lugar.vazio { background: rgba(0,0,0,.28); cursor: default; }
+.lugar:focus-visible { outline: 3px solid #ffd84d; }
+.lugar.escolhida { transform: translateY(-6px) scale(1.08); background: var(--azul); }
+.lugar.saindo { opacity: .25; }
+.lugar.alvo { background: rgba(255,216,77,.45); box-shadow: inset 0 0 0 3px #ffd84d; }
+.lugar.pousou { animation: pousar .22s ease-out; }
+@keyframes pousar { 0% { transform: scale(1.25); } 60% { transform: scale(.92); } 100% { transform: none; } }
 
-/* Telas largas (PC): grelhas um pouco maiores */
-@media (min-width: 700px) {
-  #mesa { max-width: 560px; gap: 20px; }
-}
+/* A grelha que está debaixo do dedo durante o arraste */
+.grelha.mira { box-shadow: 0 0 0 3px #ffd84d; }
+.grelha.cheia { box-shadow: 0 0 0 3px var(--vermelho); }
 
-#aviso { min-height: 1.4em; margin: 0; text-align: center; font-weight: 600; color: var(--azul-escuro); }
-
-#recomecar {
-  font-size: 1rem;
-  padding: 10px 18px;
-  border: none;
-  border-radius: 999px;
-  background: var(--azul);
-  color: #fff;
-  cursor: pointer;
-}
-
-/* Celulares estreitos: menos espaço entre as coisas */
-@media (max-width: 420px) {
-  body { padding: 12px; }
-  #mesa { gap: 10px; }
-  .grelha { padding: 6px; gap: 4px; }
-}
-
-/* Etapa 3: camadas. Cada bloco = grelha + bandeja embaixo */
-.bloco { display: flex; flex-direction: column; align-items: center; min-width: 0; }
-.bloco .grelha { width: 100%; position: relative; z-index: 1; }
-
-.bandeja {                       /* a próxima camada, pequena e apagada */
+/* A bandeja: a próxima camada, pequena e apagada */
+.bandeja {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
   width: 72%;
-  min-height: 2.1em;
-  margin-top: -4px;              /* encaixa embaixo da grelha */
-  padding: 6px 8px 4px;
+  height: calc(var(--lado) * .42 + 6px);
+  margin-top: -3px;
+  padding: 0 calc(var(--lado) * .12);
   border-radius: 0 0 10px 10px;
   background: #fff;
-  border: 1px solid #E3E6EB;
+  border: 1px solid var(--borda);
   border-top: none;
-  box-shadow: 0 3px 0 rgba(0,0,0,.18);
-  font-size: clamp(.9rem, 4.5vw, 1.3rem);
+  box-shadow: 0 3px 0 rgba(0,0,0,.12);
+  font-size: calc(var(--lado) * .3);
   text-align: center;
 }
 .bandeja span { opacity: .55; filter: saturate(.6); }
-.bandeja.vazia { visibility: hidden; }   /* guarda o espaço, mas não aparece */
-.bandeja .selo {                 /* "+N": quantas camadas ainda estão escondidas */
+.bandeja.vazia { visibility: hidden; }
+.bandeja .selo {
   position: absolute;
-  right: -10px; top: 50%;
+  right: calc(var(--lado) * -.2);
+  top: 50%;
   transform: translateY(-50%);
-  font-size: .7rem;
-  padding: 2px 6px;
+  font-size: calc(var(--lado) * .2 + 3px);
+  padding: 1px 5px;
   border-radius: 999px;
   background: var(--azul);
   color: #fff;
 }
 
-/* Animação: a bandeja "sobe" para a grelha */
+/* A bandeja "sobe" para a grelha */
 .grelha.subiu .lugar:not(.vazio) { animation: subir .35s ease-out; }
-@keyframes subir {
-  from { transform: translateY(28px) scale(.6); opacity: .3; }
-  to   { transform: none; opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .grelha.subiu .lugar { animation: none; }
-}
+@keyframes subir { from { transform: translateY(28px) scale(.6); opacity: .3; } to { transform: none; opacity: 1; } }
 
-/* Etapa 4: muitas grelhas = 3 por linha (como no jogo do anúncio) */
-#mesa.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 640px; }
-#mesa.tres .lugar { font-size: clamp(1.1rem, 5.6vw, 2.1rem); }
-#mesa.tres .bandeja { font-size: clamp(.7rem, 3.2vw, 1.1rem); }
-@media (max-width: 420px) {
-  #mesa.tres { gap: 8px; }
-  #mesa.tres .grelha { padding: 4px; gap: 3px; border-radius: 10px; }
-  #mesa.tres .bandeja .selo { right: -6px; font-size: .6rem; padding: 1px 4px; }
+/* =====================================================================
+   O FANTASMA: a comida que segue o dedo. Ele anda com "transform"
+   (que a placa de vídeo move sem redesenhar a página), por isso é suave.
+   ===================================================================== */
+.fantasma {
+  position: fixed;
+  left: 0; top: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;   /* deixa "enxergar" o que está embaixo dele */
+  z-index: 30;
+  will-change: transform;
+  filter: drop-shadow(0 10px 8px rgba(0,0,0,.35));
+  line-height: 1;
 }
+.fantasma.voltando { transition: transform .16s ease-in; }
 
-header p { margin: 4px 0 0; color: var(--texto-suave); }
-#fase { color: var(--azul); }
-
-.botoes { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-.botoes button {
-  font-size: 1rem;
-  padding: 10px 18px;
-  border-radius: 999px;
-  cursor: pointer;
-}
-#recomecar { background: #fff; color: var(--azul); border: 2px solid var(--azul); }
-#proxima { background: var(--azul); color: #fff; border: 2px solid var(--azul); font-weight: 700; }
-#proxima[hidden] { display: none; }
-
-/* Etapa 5: cronômetro e desfazer */
-#relogio { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--azul); }
-#relogio.acabando { color: #C2410C; animation: piscar 1s steps(2) infinite; }
-@keyframes piscar { 50% { opacity: .45; } }
-@media (prefers-reduced-motion: reduce) { #relogio.acabando { animation: none; } }
-#desfazer { background: #fff; color: var(--azul); border: 2px solid var(--azul); }
-.botoes button:disabled { opacity: .4; cursor: not-allowed; }
-
-/* Etapa 6: som, poderes, combo */
-.som {
-  margin-left: 6px;
-  font-size: 1.1rem;
-  vertical-align: middle;
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-
-.poderes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.poderes button {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: .95rem;
-  padding: 8px 12px;
-  border-radius: 12px;
-  border: 2px solid var(--azul-claro);
-  background: #fff;
-  color: var(--azul);
-  cursor: pointer;
-  touch-action: manipulation;
-}
-.poderes button b {
-  min-width: 1.4em;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--azul);
-  color: #fff;
-  font-size: .8rem;
-}
-.poderes button:disabled { opacity: .4; cursor: not-allowed; }
-.poderes button.ativo { border-color: var(--azul); background: var(--azul-claro); }
-
-/* Gelo: as grelhas ficam azuladas enquanto o tempo está congelado */
+/* Gelo, martelo, combo */
 #mesa.gelo .grelha { box-shadow: 0 0 0 3px #9bd4ff, 0 0 18px #9bd4ff; filter: saturate(.7) hue-rotate(-10deg); }
-/* Martelo armado: cursor de mira e comidas tremendo de leve */
 #mesa.martelo .lugar:not(.vazio) { cursor: crosshair; animation: tremer .6s ease-in-out infinite; }
 @keyframes tremer { 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
 
@@ -252,13 +181,84 @@ header p { margin: 4px 0 0; color: var(--texto-suave); }
   20%  { opacity: 1; transform: translate(-50%, 0) scale(1.1); }
   to   { opacity: 0; transform: translate(-50%, -50px) scale(1); }
 }
-@media (prefers-reduced-motion: reduce) {
-  #mesa.martelo .lugar:not(.vazio) { animation: none; }
-  .flutuante { animation-duration: .01s; }
+
+/* Relógio */
+#relogio { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--azul); }
+#relogio.acabando { color: var(--vermelho); animation: piscar 1s steps(2) infinite; }
+@keyframes piscar { 50% { opacity: .45; } }
+
+/* Poderes */
+.poderes { display: flex; gap: 6px; flex-wrap: nowrap; justify-content: center; }
+.poderes button {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: clamp(.78rem, 3.3vw, .95rem);
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 2px solid var(--azul-claro);
+  background: #fff;
+  color: var(--azul);
+  cursor: pointer;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+.poderes button b { padding: 1px 6px; border-radius: 999px; background: var(--azul); color: #fff; font-size: .8em; }
+.poderes button.ativo { border-color: var(--azul); background: var(--azul-claro); }
+
+#aviso { min-height: 1.3em; margin: 0; text-align: center; font-weight: 600; color: var(--azul-escuro); font-size: clamp(.8rem, 3.4vw, 1rem); }
+
+/* Botões de baixo */
+.botoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.botoes button {
+  font-size: clamp(.82rem, 3.4vw, 1rem);
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: #fff;
+  color: var(--azul);
+  border: 2px solid var(--azul);
+}
+#proxima { background: var(--azul); color: #fff; font-weight: 700; }
+#proxima[hidden] { display: none; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Menu de dificuldade */
+.menu {
+  position: fixed; inset: 0;
+  display: grid; place-items: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, .55);
+  z-index: 50;
+}
+.menu[hidden] { display: none; }
+.cartao {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,.25);
+}
+.cartao h2 { margin: 0 0 14px; color: var(--azul); font-size: 1.3rem; }
+.niveis { display: grid; gap: 10px; }
+.niveis button {
+  display: grid; gap: 2px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 2px solid var(--azul-claro);
+  background: var(--fundo);
+  cursor: pointer;
+  font-size: 1.05rem;
+  color: var(--azul);
+}
+.niveis button:hover, .niveis button:focus-visible { border-color: var(--azul); background: var(--azul-claro); }
+.niveis small { color: var(--texto-suave); font-size: .82rem; }
+.dica { color: var(--texto-suave); font-size: .9rem; margin: 14px 0 8px; }
+#continuar { display: grid; gap: 6px; }
+#continuar button, .discreto {
+  border: none; background: none; color: var(--azul); text-decoration: underline; cursor: pointer; font-size: .9rem; padding: 4px;
 }
 
-@media (max-width: 420px) {
-  .poderes { gap: 5px; flex-wrap: nowrap; }
-  .poderes button { font-size: .8rem; padding: 6px 7px; gap: 4px; border-radius: 10px; }
-  .poderes button b { font-size: .7rem; padding: 1px 5px; }
+@media (prefers-reduced-motion: reduce) {
+  .grelha.subiu .lugar, #mesa.martelo .lugar:not(.vazio), #relogio.acabando, .lugar.pousou { animation: none; }
+  .flutuante { animation-duration: .01s; }
 }

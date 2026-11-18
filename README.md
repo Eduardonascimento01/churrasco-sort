@@ -5,8 +5,9 @@ Jogo de juntar 3 comidas iguais na mesma grelha. Feito do zero, em HTML e JavaSc
 **Jogar:** https://eduardonascimento01.github.io/churrasco-sort/
 
 ## Como jogar
+0. Escolha a dificuldade (😊 Fácil, 🙂 Médio, 😈 Difícil). Todo nível começa na **fase 01**, e cada fase é mais difícil que a anterior.
 1. Toque numa comida (ela sobe).
-2. Toque num lugar vazio para levá-la até lá, ou simplesmente **arraste** a comida até ele (mouse ou dedo).
+2. **Arraste** a comida e solte em cima de qualquer grelha com espaço (ela cai no lugar vazio mais perto), ou toque na comida e depois na grelha.
 3. Quando 3 comidas iguais ficam na mesma grelha, elas saem e a **bandeja** de baixo sobe (a próxima camada).
 4. Limpe todas as grelhas para vencer e passe para a próxima fase. O jogo lembra em que fase você parou. Para abrir uma fase direto, use `?fase=N` no endereço.
 
@@ -20,6 +21,7 @@ Jogo de juntar 3 comidas iguais na mesma grelha. Feito do zero, em HTML e JavaSc
 | `teste.js` | Confere as regras sem navegador e RESOLVE a fase sozinho, provando que ela tem saída: `node teste.js` |
 
 ## Etapas
+- [x] Extra: 12 grelhas que se ajustam ao tamanho da tela (PC e celular), arrasto mais suave e 3 níveis de dificuldade
 - [x] 1. Dados e regra do trio
 - [x] 2. Arrastar com mouse e dedo
 - [x] 3. Camadas (a bandeja sobe quando a grelha limpa)

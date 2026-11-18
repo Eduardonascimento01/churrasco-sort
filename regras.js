@@ -172,21 +172,34 @@
   //   trios:  1   1   1   2   2   2   3   3   3   3   3   3   (+1 a cada 3 fases)
   //   vagas:  6   5   5   4   4   3   3   2   2   2   2   2   (−1 a cada 2 fases)
   //   e o tempo por comida encolhe um pouco em TODA fase.
-  function receita(fase) {
+  //
+  // Atualização (pedido do Eduardo, 2026-11-17): 12 grelhas (3 × 4, como no
+  // anúncio) e 3 NÍVEIS de dificuldade. Cada nível é um "ajuste" na receita:
+  const NIVEIS = {
+    facil:   { nome: "Fácil",   tiposBase: 5, triosCada: 4, vagasBase: 10, vagasMin: 5, tempoX: 1.6 },
+    medio:   { nome: "Médio",   tiposBase: 6, triosCada: 3, vagasBase: 8,  vagasMin: 3, tempoX: 1.0 },
+    dificil: { nome: "Difícil", tiposBase: 7, triosCada: 2, vagasBase: 6,  vagasMin: 2, tempoX: 0.7 },
+  };
+  //   tiposBase = tipos de comida na fase 1 (+1 a cada 2 fases)
+  //   triosCada = de quantas em quantas fases cada tipo ganha +1 trio
+  //   vagas     = vagas na fase 1, perdendo 1 a cada 2 fases, até o mínimo
+  //   tempoX    = multiplica o cronômetro (1,6 = 60% mais tempo)
+  function receita(fase, nivel = "medio") {
+    const n = NIVEIS[nivel] || NIVEIS.medio;
     const nomes = Object.keys(COMIDAS);
-    // Teto de 10 tipos e 3 trios: acima disso o solucionador demora demais para provar a fase.
-    const tipos = Math.min(5 + Math.floor((fase - 1) / 2), 10);
-    const trios = Math.min(1 + Math.floor((fase - 1) / 3), 3);
-    const grelhas = 9;
-    const vagas = Math.max(2, 6 - Math.floor(fase / 2));
+    // Teto de 11 tipos e 3 trios: acima disso o solucionador demora demais para provar a fase.
+    const tipos = Math.min(n.tiposBase + Math.floor((fase - 1) / 2), 11);
+    const trios = Math.min(1 + Math.floor((fase - 1) / n.triosCada), 3);
+    const grelhas = 12;
+    const vagas = Math.max(n.vagasMin, n.vagasBase - Math.floor(fase / 2));
     const comidas = tipos * trios * 3;
     // Segundos por comida: começa em 6 e cai 7% (do que sobra acima de 1,5) a
     // cada fase. É uma curva que SEMPRE desce, mas nunca chega a 1,5:
     // fase 1 = 6 s, fase 10 ≈ 3,8 s, fase 20 ≈ 2,6 s, fase 40 ≈ 1,8 s.
     // (Um "piso" fixo faria as fases pararem de ficar difíceis: o teste pegou isso.)
     const porComida = 1.5 + 4.5 * Math.pow(0.93, fase - 1);
-    const tempo = Math.round(comidas * porComida + 30);
-    return { tipos, trios, grelhas, vagas, comidas, tempo, nomes: nomes.slice(0, tipos) };
+    const tempo = Math.round((comidas * porComida + 30) * n.tempoX);
+    return { tipos, trios, grelhas, vagas, comidas, tempo, nivel, nomes: nomes.slice(0, tipos) };
   }
 
   // Monta uma fase com o sorteio: coloca as comidas na frente (deixando as
@@ -273,10 +286,11 @@
   // Gera a fase N: sorteia, e o solucionador PROVA que tem saída.
   // Se não achar saída (ou se já começar com um trio pronto), tenta outro
   // sorteio. É o "montar o quebra-cabeça e conferir antes de entregar".
-  function gerarFase(fase) {
-    const r = receita(fase);
+  function gerarFase(fase, nivel = "medio") {
+    const r = receita(fase, nivel);
+    const semNivel = Object.keys(NIVEIS).indexOf(r.nivel) + 1; // 1, 2 ou 3: cada nível tem as suas fases
     for (let tentativa = 0; tentativa < 60; tentativa++) {
-      const grelhas = montar(r, sorteador(fase * 1000 + tentativa));
+      const grelhas = montar(r, sorteador(semNivel * 1000000 + fase * 1000 + tentativa));
       if (grelhas.some(temTrio)) continue;      // trio de graça não tem graça
       if (!temSolucao(grelhas)) continue;
       const solucao = resolver(grelhas);
@@ -334,7 +348,7 @@
 
   const Regras = {
     removerTrio, tipoMaisVisivel, pontosDoTrio, bonusDeTempo,
-    LUGARES, COMIDAS, criarFase, frente, camadaVazia, temTrio,
+    LUGARES, COMIDAS, NIVEIS, criarFase, frente, camadaVazia, temTrio,
     mover, limparSeTrio, venceu, contar, temSolucao, copiar,
     sorteador, embaralhar, receita, montar, resolver, gerarFase,
   };
