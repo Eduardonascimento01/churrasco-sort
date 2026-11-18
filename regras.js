@@ -285,7 +285,55 @@
     return { grelhas: criarFase(), solucao: null, tentativa: -1, receita: r }; // reserva
   }
 
+  // =====================================================================
+  // ETAPA 6: PODERES E PONTOS
+  // =====================================================================
+
+  // Tira 3 comidas de um tipo do jogo, de onde estiverem. Procura primeiro
+  // na frente (o jogador vê sumir) e depois nas bandejas, da mais próxima
+  // para a mais funda. Tirar SEMPRE 3 mantém a regra do "múltiplo de 3":
+  // a fase continua tendo como terminar.
+  // Devolve as grelhas que mudaram (para a tela animar), ou null se não deu.
+  function removerTrio(grelhas, tipo) {
+    if ((contar(grelhas)[tipo] || 0) < LUGARES) return null;
+    let falta = LUGARES;
+    const mudaram = new Set();
+    const fundo = Math.max(...grelhas.map((p) => p.length));
+    for (let camada = 0; camada < fundo && falta > 0; camada++)
+      for (let g = 0; g < grelhas.length && falta > 0; g++) {
+        const c = grelhas[g][camada];
+        if (!c) continue;
+        for (let l = 0; l < LUGARES && falta > 0; l++)
+          if (c[l] === tipo) { c[l] = null; falta--; mudaram.add(g); }
+      }
+    // Arrumação: camadas que ficaram vazias saem da fila (a de trás sobe),
+    // e alguma frente nova pode já ter vindo com trio.
+    for (const p of grelhas) {
+      for (let i = p.length - 1; i >= 1; i--) if (camadaVazia(p[i])) p.splice(i, 1);
+      while (p.length > 1 && camadaVazia(p[0])) p.shift();
+    }
+    grelhas.forEach((_, g) => { if (limparSeTrio(grelhas, g)) mudaram.add(g); });
+    return [...mudaram];
+  }
+
+  // Para o poder "Juntar": qual tipo aparece mais nas FRENTES?
+  // (Empate: o que tem mais no total.) É o trio que o jogador mais "vê".
+  function tipoMaisVisivel(grelhas) {
+    const naFrente = {};
+    for (const p of grelhas) for (const x of frente(p)) if (x) naFrente[x] = (naFrente[x] || 0) + 1;
+    const total = contar(grelhas);
+    const tipos = Object.keys(naFrente).filter((t) => total[t] >= LUGARES);
+    tipos.sort((a, b) => naFrente[b] - naFrente[a] || total[b] - total[a]);
+    return tipos[0] || null;
+  }
+
+  // Pontos: cada trio vale 100 × combo (trios seguidos valem mais).
+  // No fim, cada segundo que sobrou vale 5 pontos.
+  const pontosDoTrio = (combo) => 100 * combo;
+  const bonusDeTempo = (segundos) => Math.max(0, segundos) * 5;
+
   const Regras = {
+    removerTrio, tipoMaisVisivel, pontosDoTrio, bonusDeTempo,
     LUGARES, COMIDAS, criarFase, frente, camadaVazia, temTrio,
     mover, limparSeTrio, venceu, contar, temSolucao, copiar,
     sorteador, embaralhar, receita, montar, resolver, gerarFase,

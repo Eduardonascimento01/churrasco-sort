@@ -15,6 +15,7 @@ Jogo de juntar 3 comidas iguais na mesma grelha. Feito do zero, em HTML e JavaSc
 |---|---|
 | `regras.js` | Dados e regras, sem tela: `temTrio`, `mover`, `limparSeTrio`, `venceu`; gerador de fases (`receita`, `montar`, `gerarFase`) e o solucionador (`resolver`) |
 | `jogo.js` | Tela: desenha as grelhas e responde aos cliques |
+| `som.js` | Efeitos sonoros sintetizados na hora (Web Audio API), sem arquivos de áudio |
 | `estilo.css` | Visual (madeira, grelhas e brilho do trio) |
 | `teste.js` | Confere as regras sem navegador e RESOLVE a fase sozinho, provando que ela tem saída: `node teste.js` |
 
@@ -24,5 +25,5 @@ Jogo de juntar 3 comidas iguais na mesma grelha. Feito do zero, em HTML e JavaSc
 - [x] 3. Camadas (a bandeja sobe quando a grelha limpa)
 - [x] 4. Gerar fases que sempre têm solução (fases infinitas, dificuldade crescente, progresso salvo)
 - [x] 5. Tempo (pausa com a aba escondida) e 3 "desfazer" por fase; sempre 9 grelhas e toda fase mais difícil que a anterior
-- [ ] 6. Poderes, combo e som
+- [x] 6. Poderes (❄️ congelar 10 s, 🔨 martelo, ✨ juntar; 1 de cada por fase), pontos com combo, recorde por fase e som sintetizado (Web Audio, botão 🔊)
 - [ ] 7. Ranking online

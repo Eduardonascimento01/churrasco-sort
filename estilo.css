@@ -194,3 +194,71 @@ header p { margin: 4px 0 0; color: var(--texto-suave); }
 @media (prefers-reduced-motion: reduce) { #relogio.acabando { animation: none; } }
 #desfazer { background: #fff; color: var(--azul); border: 2px solid var(--azul); }
 .botoes button:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Etapa 6: som, poderes, combo */
+.som {
+  margin-left: 6px;
+  font-size: 1.1rem;
+  vertical-align: middle;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.poderes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.poderes button {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .95rem;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--azul-claro);
+  background: #fff;
+  color: var(--azul);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.poderes button b {
+  min-width: 1.4em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--azul);
+  color: #fff;
+  font-size: .8rem;
+}
+.poderes button:disabled { opacity: .4; cursor: not-allowed; }
+.poderes button.ativo { border-color: var(--azul); background: var(--azul-claro); }
+
+/* Gelo: as grelhas ficam azuladas enquanto o tempo está congelado */
+#mesa.gelo .grelha { box-shadow: 0 0 0 3px #9bd4ff, 0 0 18px #9bd4ff; filter: saturate(.7) hue-rotate(-10deg); }
+/* Martelo armado: cursor de mira e comidas tremendo de leve */
+#mesa.martelo .lugar:not(.vazio) { cursor: crosshair; animation: tremer .6s ease-in-out infinite; }
+@keyframes tremer { 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+
+.flutuante {
+  position: fixed;
+  left: 50%; top: 42%;
+  transform: translate(-50%, 0);
+  font-size: clamp(1.4rem, 6vw, 2.2rem);
+  font-weight: 800;
+  color: var(--azul);
+  text-shadow: 0 2px 0 #fff, 0 0 12px #fff;
+  pointer-events: none;
+  animation: subirSumir 1.1s ease-out forwards;
+  z-index: 20;
+  white-space: nowrap;
+}
+@keyframes subirSumir {
+  from { opacity: 0; transform: translate(-50%, 20px) scale(.8); }
+  20%  { opacity: 1; transform: translate(-50%, 0) scale(1.1); }
+  to   { opacity: 0; transform: translate(-50%, -50px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #mesa.martelo .lugar:not(.vazio) { animation: none; }
+  .flutuante { animation-duration: .01s; }
+}
+
+@media (max-width: 420px) {
+  .poderes { gap: 5px; flex-wrap: nowrap; }
+  .poderes button { font-size: .8rem; padding: 6px 7px; gap: 4px; border-radius: 10px; }
+  .poderes button b { font-size: .7rem; padding: 1px 5px; }
+}

@@ -8,11 +8,17 @@
 </head>
 <body>
   <header>
-    <h1>🔥 Churrasco Sort</h1>
+    <h1>🔥 Churrasco Sort <button id="som" class="som" aria-label="Desligar som">🔊</button></h1>
     <p><strong id="fase">Fase 1</strong> · <span id="relogio" aria-live="off">⏱ 0:00</span> · <span id="contador"></span></p>
   </header>
 
   <main id="mesa" aria-label="Grelhas"></main>
+
+  <div class="poderes" aria-label="Poderes">
+    <button id="p-congelar" title="Para o relógio por 10 segundos">❄️ Congelar <b>1</b></button>
+    <button id="p-martelo" title="Toque numa comida: 3 dela somem">🔨 Martelo <b>1</b></button>
+    <button id="p-juntar" title="Some com 3 da comida mais à vista">✨ Juntar <b>1</b></button>
+  </div>
 
   <p id="aviso" role="status"></p>
   <div class="botoes">
@@ -22,6 +28,7 @@
   </div>
 
   <script src="regras.js"></script>
+  <script src="som.js"></script>
   <script src="jogo.js"></script>
 </body>
 </html>

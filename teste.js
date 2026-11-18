@@ -118,3 +118,27 @@ for (let n = 1; n < 30; n++) {
   confere(`fase ${n + 1} é mais difícil que a ${n}`, pioraAlgo && melhoraNada);
 }
 console.log(`${ok} conferências ok no total`);
+
+// ---- Etapa 6: poderes ----
+{
+  let g = [[["milho", "coxa", null], ["milho", "milho", "coxa"]], [["coxa", null, null]]];
+  const mudaram = R.removerTrio(g, "milho");
+  confere("martelo tira 3 milhos (frente e bandeja)", !JSON.stringify(g).includes("milho") && mudaram.includes(0));
+  confere("depois do martelo, o resto continua múltiplo de 3", R.temSolucao(g));
+  confere("martelo não tira se tiver menos de 3", R.removerTrio([[["coxa", null, null]]], "coxa") === null);
+
+  g = [[["milho", "milho", "coxa"]], [["coxa", "milho", null]], [["coxa", null, null]]];
+  confere("juntar escolhe o tipo mais visível na frente", R.tipoMaisVisivel(g) === "milho" || R.tipoMaisVisivel(g) === "coxa");
+
+  // Martelo em todas as fases geradas: a fase continua com solução?
+  let todasOk = true;
+  for (let n = 1; n <= 6; n++) {
+    const f = R.gerarFase(n).grelhas;
+    R.removerTrio(f, R.tipoMaisVisivel(f));
+    if (!R.temSolucao(f) || !R.resolver(f, 50000)) todasOk = false;
+  }
+  confere("depois de usar o poder, as fases 1 a 6 continuam com saída", todasOk);
+  confere("combo x3 vale 300", R.pontosDoTrio(3) === 300);
+  confere("bônus de 10 s vale 50", R.bonusDeTempo(10) === 50);
+}
+console.log(`${ok} conferências ok no total (com os poderes)`);
