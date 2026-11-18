@@ -21,7 +21,7 @@ Jogo de juntar 3 comidas iguais na mesma grelha. Feito do zero, em HTML e JavaSc
 | `teste.js` | Confere as regras sem navegador e RESOLVE a fase sozinho, provando que ela tem saída: `node teste.js` |
 
 ## Etapas
-- [x] Extra: 12 grelhas que se ajustam ao tamanho da tela (PC e celular), arrasto mais suave e 3 níveis de dificuldade
+- [x] Extra: 15 grelhas (3 × 5), todas com comida desde a fase 01, que se ajustam ao tamanho da tela (PC e celular), arrasto mais suave e 3 níveis de dificuldade
 - [x] 1. Dados e regra do trio
 - [x] 2. Arrastar com mouse e dedo
 - [x] 3. Camadas (a bandeja sobe quando a grelha limpa)

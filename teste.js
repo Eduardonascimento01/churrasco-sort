@@ -44,7 +44,7 @@ for (let n = 1; n <= 15; n++) {
   const r = f.receita;
   confere(`fase ${n}: tem solução`, f.solucao !== null);
   confere(`fase ${n}: múltiplo de 3`, R.temSolucao(f.grelhas));
-  confere(`fase ${n}: ${r.tipos * r.trios * 3} comidas`, total === r.tipos * r.trios * 3);
+  confere(`fase ${n}: ${r.comidas} comidas`, total === r.comidas);
   confere(`fase ${n}: não começa com trio pronto`, !f.grelhas.some(R.temTrio));
   if (f.solucao) {
     const jogo = R.copiar(f.grelhas);
@@ -115,8 +115,8 @@ for (const nivel of Object.keys(R.NIVEIS)) {
   let tudoOk = true;
   for (let n = 1; n < 30; n++) {
     const a = R.receita(n, nivel), b = R.receita(n + 1, nivel);
-    const pioraAlgo = b.tipos > a.tipos || b.trios > a.trios || b.vagas < a.vagas || b.tempo / b.comidas < a.tempo / a.comidas;
-    const melhoraNada = b.tipos >= a.tipos && b.trios >= a.trios && b.vagas <= a.vagas && b.grelhas === 12;
+    const pioraAlgo = b.tipos > a.tipos || b.comidas > a.comidas || b.vagas < a.vagas || b.tempo / b.comidas < a.tempo / a.comidas;
+    const melhoraNada = b.tipos >= a.tipos && b.comidas >= a.comidas && b.vagas <= a.vagas && b.grelhas === 15;
     if (!(pioraAlgo && melhoraNada)) { tudoOk = false; console.error('  piorou errado:', nivel, n, '->', n + 1); }
   }
   confere(`${nivel}: fases 1 a 30 sempre mais difíceis`, tudoOk);
@@ -128,6 +128,13 @@ for (let n = 1; n <= 20; n++) {
 }
 confere('fases do fácil e do difícil são diferentes', JSON.stringify(R.gerarFase(3, 'facil').grelhas) !== JSON.stringify(R.gerarFase(3, 'dificil').grelhas));
 console.log(`${ok} conferências ok no total`);
+
+// ---- 15 grelhas, todas com comida ----
+for (const nivel of Object.keys(R.NIVEIS)) {
+  const f = R.gerarFase(1, nivel).grelhas;
+  confere(`${nivel} fase 01: 15 grelhas`, f.length === 15);
+  confere(`${nivel} fase 01: nenhuma grelha começa vazia`, f.every((p) => !R.camadaVazia(R.frente(p))));
+}
 
 // ---- Etapa 6: poderes ----
 {

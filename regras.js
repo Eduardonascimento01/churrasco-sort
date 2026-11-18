@@ -173,26 +173,33 @@
   //   vagas:  6   5   5   4   4   3   3   2   2   2   2   2   (−1 a cada 2 fases)
   //   e o tempo por comida encolhe um pouco em TODA fase.
   //
-  // Atualização (pedido do Eduardo, 2026-11-17): 12 grelhas (3 × 4, como no
-  // anúncio) e 3 NÍVEIS de dificuldade. Cada nível é um "ajuste" na receita:
+  // Atualização 2 (pedido do Eduardo, 2026-11-17): 15 GRELHAS (3 × 5) e
+  // TODAS COM COMIDA desde a fase 01. Agora a receita parte do espaço:
+  //   frente cheia = 45 lugares − vagas      (só as vagas ficam vazias)
+  //   bandejas     = mais comidas escondidas atrás, crescendo a cada fase
+  //   trios        = o total disso, arredondado para cima em trios
+  // Os trios são distribuídos entre os tipos em rodízio (milho, coxa,
+  // espeto, ..., milho, coxa...), então cada tipo continua múltiplo de 3.
+  const GRELHAS = 15;
   const NIVEIS = {
-    facil:   { nome: "Fácil",   tiposBase: 5, triosCada: 4, vagasBase: 10, vagasMin: 5, tempoX: 1.6 },
-    medio:   { nome: "Médio",   tiposBase: 6, triosCada: 3, vagasBase: 8,  vagasMin: 3, tempoX: 1.0 },
-    dificil: { nome: "Difícil", tiposBase: 7, triosCada: 2, vagasBase: 6,  vagasMin: 2, tempoX: 0.7 },
+    facil:   { nome: "Fácil",   tiposBase: 6, vagasBase: 9, vagasMin: 5, bandejaBase: 6,  bandejaPorFase: 3, tempoX: 1.6 },
+    medio:   { nome: "Médio",   tiposBase: 7, vagasBase: 7, vagasMin: 3, bandejaBase: 9,  bandejaPorFase: 4, tempoX: 1.0 },
+    dificil: { nome: "Difícil", tiposBase: 8, vagasBase: 5, vagasMin: 2, bandejaBase: 12, bandejaPorFase: 5, tempoX: 0.7 },
   };
-  //   tiposBase = tipos de comida na fase 1 (+1 a cada 2 fases)
-  //   triosCada = de quantas em quantas fases cada tipo ganha +1 trio
-  //   vagas     = vagas na fase 1, perdendo 1 a cada 2 fases, até o mínimo
-  //   tempoX    = multiplica o cronômetro (1,6 = 60% mais tempo)
+  //   tiposBase   = tipos de comida na fase 1 (+1 a cada 2 fases, até 12)
+  //   vagas       = vagas na fase 1, perdendo 1 a cada 2 fases, até o mínimo
+  //   bandeja...  = comidas escondidas nas bandejas na fase 1, e quantas a mais por fase
+  //   tempoX      = multiplica o cronômetro (1,6 = 60% mais tempo)
+  const TETO_BANDEJA = 75; // acima disso o solucionador demora demais para provar a fase
   function receita(fase, nivel = "medio") {
     const n = NIVEIS[nivel] || NIVEIS.medio;
     const nomes = Object.keys(COMIDAS);
-    // Teto de 11 tipos e 3 trios: acima disso o solucionador demora demais para provar a fase.
-    const tipos = Math.min(n.tiposBase + Math.floor((fase - 1) / 2), 11);
-    const trios = Math.min(1 + Math.floor((fase - 1) / n.triosCada), 3);
-    const grelhas = 12;
+    const tipos = Math.min(n.tiposBase + Math.floor((fase - 1) / 2), nomes.length);
+    const grelhas = GRELHAS;
     const vagas = Math.max(n.vagasMin, n.vagasBase - Math.floor(fase / 2));
-    const comidas = tipos * trios * 3;
+    const naBandeja = Math.min(n.bandejaBase + (fase - 1) * n.bandejaPorFase, TETO_BANDEJA);
+    const trios = Math.ceil((grelhas * 3 - vagas + naBandeja) / 3); // total de trios da fase
+    const comidas = trios * 3;
     // Segundos por comida: começa em 6 e cai 7% (do que sobra acima de 1,5) a
     // cada fase. É uma curva que SEMPRE desce, mas nunca chega a 1,5:
     // fase 1 = 6 s, fase 10 ≈ 3,8 s, fase 20 ≈ 2,6 s, fase 40 ≈ 1,8 s.
@@ -206,8 +213,8 @@
   // vagas) e o que sobra vai, de 3 em 3, para as bandejas das grelhas.
   function montar(r, sortear) {
     const comidas = [];
-    for (const nome of r.nomes)
-      for (let i = 0; i < r.trios * 3; i++) comidas.push(nome);
+    for (let t = 0; t < r.trios; t++)                 // rodízio de tipos, 3 de cada vez
+      for (let i = 0; i < 3; i++) comidas.push(r.nomes[t % r.tipos]);
     embaralhar(comidas, sortear);
 
     // Frente: escolhe quais lugares ficam vazios.
