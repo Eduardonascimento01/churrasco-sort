@@ -192,16 +192,18 @@
   // espeto, ..., milho, coxa...), então cada tipo continua múltiplo de 3.
   const GRELHAS = 15;
   const NIVEIS = {
-    facil:   { nome: "Fácil",   tiposBase: 6, vagasBase: 9, vagasMin: 5, bandejaBase: 6,  bandejaPorFase: 3, tempoX: 1.6, espalhar: 5 },
-    medio:   { nome: "Médio",   tiposBase: 7, vagasBase: 7, vagasMin: 3, bandejaBase: 9,  bandejaPorFase: 4, tempoX: 1.0, espalhar: 12 },
-    dificil: { nome: "Difícil", tiposBase: 8, vagasBase: 5, vagasMin: 2, bandejaBase: 12, bandejaPorFase: 5, tempoX: 0.7, espalhar: 24 },
+    facil:   { nome: "Fácil",   tiposBase: 6, vagasBase: 9, vagasMin: 5, bandejaBase: 6,  bandejaPorFase: 3, espalhar: 5,  espalharMax: 16 },
+    medio:   { nome: "Médio",   tiposBase: 7, vagasBase: 7, vagasMin: 3, bandejaBase: 9,  bandejaPorFase: 4, espalhar: 12, espalharMax: 26 },
+    dificil: { nome: "Difícil", tiposBase: 8, vagasBase: 5, vagasMin: 2, bandejaBase: 12, bandejaPorFase: 5, espalhar: 24, espalharMax: 34 },
   };
   //   tiposBase   = tipos de comida na fase 1 (+1 a cada 2 fases, até 12)
   //   vagas       = vagas na fase 1, perdendo 1 a cada 2 fases, até o mínimo
   //   bandeja...  = comidas escondidas nas bandejas na fase 1, e quantas a mais por fase
-  //   tempoX      = multiplica o cronômetro (1,6 = 60% mais tempo)
-  //   espalhar    = o quanto as 3 cópias de uma comida se espalham pelas camadas (mais = mais difícil)
+  //   (tempo: 2 minutos fixos em toda fase, pedido do Eduardo)
+  //   espalhar    = na fase 1, o quanto as 3 cópias de uma comida se espalham pelas camadas (cresce a cada fase)
   const TETO_BANDEJA = 75; // acima disso o solucionador demora demais para provar a fase
+  const TEMPO_FIXO = 120;  // 2:00 em toda fase
+
   const TETO_TIPOS = 30;   // das 40 comidas, até 30 numa fase só (as "parecidas" não podem ir juntas)
   function receita(fase, nivel = "medio") {
     const n = NIVEIS[nivel] || NIVEIS.medio;
@@ -215,13 +217,16 @@
     // Só quando a fase tem mais trios que o teto é que alguma repete.
     const tipos = Math.min(trios, TETO_TIPOS);
     const nomes = cardapioDaFase(fase, nivel, tipos);
-    // Segundos por comida: começa em 6 e cai 7% (do que sobra acima de 1,5) a
-    // cada fase. É uma curva que SEMPRE desce, mas nunca chega a 1,5:
-    // fase 1 = 6 s, fase 10 ≈ 3,8 s, fase 20 ≈ 2,6 s, fase 40 ≈ 1,8 s.
-    // (Um "piso" fixo faria as fases pararem de ficar difíceis: o teste pegou isso.)
-    const porComida = 1.5 + 4.5 * Math.pow(0.93, fase - 1);
-    const tempo = Math.round((comidas * porComida + 30) * n.tempoX);
-    return { tipos, trios, grelhas, vagas, comidas, tempo, nivel, nomes };
+    // TEMPO (pedido do Eduardo, 2026-11-17): 2 minutos em TODA fase e em
+    // todo nível. Como a fase seguinte tem mais comidas, sobra menos tempo
+    // por comida: o relógio fixo já aperta sozinho.
+    const tempo = TEMPO_FIXO;
+    // ESPALHAR: o "parafuso" que substituiu o tempo. As 3 cópias de cada
+    // comida se espalham um pouco mais a cada fase, numa curva que SEMPRE
+    // sobe mas nunca passa do espalharMax do nível (um teto fixo faria as fases
+    // pararem de ficar difíceis: o teste já pegou isso uma vez com o tempo).
+    const espalhar = n.espalharMax - (n.espalharMax - n.espalhar) * Math.pow(0.9, fase - 1);
+    return { tipos, trios, grelhas, vagas, comidas, tempo, espalhar, nivel, nomes };
   }
 
   // Sorteia o cardápio da fase: `tipos` comidas diferentes, misturando os
@@ -297,7 +302,7 @@
     // 1. A fila: cada cópia ganha uma "senha" = posição do trio + um tanto sorteado.
     const itens = [];
     trios.forEach((tipo, i) => {
-      for (let k = 0; k < 3; k++) itens.push({ tipo, senha: i * 3 + sortear() * n.espalhar });
+      for (let k = 0; k < 3; k++) itens.push({ tipo, senha: i * 3 + sortear() * r.espalhar });
     });
     itens.sort((a, b) => a.senha - b.senha);
     const fila = itens.map((x) => x.tipo);
@@ -448,13 +453,32 @@
     return tipos[0] || null;
   }
 
+  // Para o "Juntar" ser um poder JUSTO: tirar 3 comidas às vezes esvazia uma
+  // grelha antes da hora, a bandeja sobe cedo e a fase pode TRAVAR (o teste
+  // pegou isso na fase 3). Então, antes, o jogo "pensa" como o solucionador:
+  // testa as comidas mais à vista e escolhe a primeira que deixa a fase com
+  // saída. Se nenhuma passar no teste rápido, fica com a mais à vista.
+  function escolherParaJuntar(grelhas, limite = 6000) {
+    const naFrente = {};
+    for (const p of grelhas) for (const x of frente(p)) if (x) naFrente[x] = (naFrente[x] || 0) + 1;
+    const total = contar(grelhas);
+    const candidatos = Object.keys(total).filter((t) => total[t] >= LUGARES);
+    candidatos.sort((a, b) => (naFrente[b] || 0) - (naFrente[a] || 0) || total[b] - total[a]);
+    for (const tipo of candidatos.slice(0, 5)) {
+      const teste = copiar(grelhas);
+      removerTrio(teste, tipo);
+      if (venceu(teste) || resolver(teste, limite)) return tipo;
+    }
+    return candidatos[0] || null;
+  }
+
   // Pontos: cada trio vale 100 × combo (trios seguidos valem mais).
   // No fim, cada segundo que sobrou vale 5 pontos.
   const pontosDoTrio = (combo) => 100 * combo;
   const bonusDeTempo = (segundos) => Math.max(0, segundos) * 5;
 
   const Regras = {
-    removerTrio, tipoMaisVisivel, pontosDoTrio, bonusDeTempo,
+    removerTrio, tipoMaisVisivel, escolherParaJuntar, pontosDoTrio, bonusDeTempo,
     LUGARES, COMIDAS, GRUPOS, NIVEIS, PARECIDAS, cardapio, criarFase, frente, camadaVazia, temTrio,
     mover, limparSeTrio, venceu, contar, temSolucao, copiar,
     sorteador, embaralhar, receita, montar, resolver, gerarFase,

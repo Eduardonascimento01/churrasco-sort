@@ -27,6 +27,6 @@ Jogo de juntar 3 comidas iguais na mesma grelha. Feito do zero, em HTML e JavaSc
 - [x] 2. Arrastar com mouse e dedo
 - [x] 3. Camadas (a bandeja sobe quando a grelha limpa)
 - [x] 4. Gerar fases que sempre têm solução (fases infinitas, dificuldade crescente, progresso salvo)
-- [x] 5. Tempo (pausa com a aba escondida) e 3 "desfazer" por fase; sempre 9 grelhas e toda fase mais difícil que a anterior
+- [x] 5. Tempo: 2:00 fixos em toda fase (pausa com a aba escondida) e 3 "desfazer" por fase; sempre 9 grelhas e toda fase mais difícil que a anterior
 - [x] 6. Poderes (❄️ congelar 10 s, 🔨 martelo, ✨ juntar; 1 de cada por fase), pontos com combo, recorde por fase e som sintetizado (Web Audio, botão 🔊)
 - [ ] 7. Ranking online

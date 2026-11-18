@@ -501,7 +501,7 @@
   }
   function usarJuntar() {
     if (ocupado || terminou || poderes.juntar === 0) return;
-    const tipo = R.tipoMaisVisivel(grelhas);
+    const tipo = R.escolherParaJuntar(grelhas); // a mais à vista que NÃO trava a fase
     if (!tipo) return;
     gastar("juntar");
     S.poder();

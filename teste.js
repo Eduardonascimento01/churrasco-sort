@@ -115,15 +115,17 @@ for (const nivel of Object.keys(R.NIVEIS)) {
   let tudoOk = true;
   for (let n = 1; n < 30; n++) {
     const a = R.receita(n, nivel), b = R.receita(n + 1, nivel);
-    const pioraAlgo = b.tipos > a.tipos || b.comidas > a.comidas || b.vagas < a.vagas || b.tempo / b.comidas < a.tempo / a.comidas;
-    const melhoraNada = b.tipos >= a.tipos && b.comidas >= a.comidas && b.vagas <= a.vagas && b.grelhas === 15;
+    const pioraAlgo = b.tipos > a.tipos || b.comidas > a.comidas || b.vagas < a.vagas || b.espalhar > a.espalhar;
+    const melhoraNada = b.tipos >= a.tipos && b.comidas >= a.comidas && b.vagas <= a.vagas && b.espalhar >= a.espalhar && b.grelhas === 15 && b.tempo === 120;
     if (!(pioraAlgo && melhoraNada)) { tudoOk = false; console.error('  piorou errado:', nivel, n, '->', n + 1); }
   }
   confere(`${nivel}: fases 1 a 30 sempre mais difíceis`, tudoOk);
 }
 for (let n = 1; n <= 20; n++) {
   const f = R.receita(n, 'facil'), m = R.receita(n, 'medio'), d = R.receita(n, 'dificil');
-  confere(`fase ${n}: fácil tem mais tempo por comida que médio, e médio mais que difícil`, f.tempo / f.comidas > m.tempo / m.comidas && m.tempo / m.comidas > d.tempo / d.comidas);
+  confere(`fase ${n}: 2:00 em todos os níveis`, f.tempo === 120 && m.tempo === 120 && d.tempo === 120);
+  confere(`fase ${n}: fácil espalha menos que médio, e médio menos que difícil`, f.espalhar < m.espalhar && m.espalhar < d.espalhar);
+  confere(`fase ${n}: fácil tem menos comidas que difícil`, f.comidas < d.comidas);
   confere(`fase ${n}: fácil tem mais vagas que difícil`, f.vagas > d.vagas);
 }
 confere('fases do fácil e do difícil são diferentes', JSON.stringify(R.gerarFase(3, 'facil').grelhas) !== JSON.stringify(R.gerarFase(3, 'dificil').grelhas));
@@ -192,10 +194,10 @@ for (const nivel of Object.keys(R.NIVEIS)) {
   let todasOk = true;
   for (let n = 1; n <= 6; n++) {
     const f = R.gerarFase(n).grelhas;
-    R.removerTrio(f, R.tipoMaisVisivel(f));
+    R.removerTrio(f, R.escolherParaJuntar(f));
     if (!R.temSolucao(f) || !R.resolver(f, 50000)) todasOk = false;
   }
-  confere("depois de usar o poder, as fases 1 a 6 continuam com saída", todasOk);
+  confere("depois do Juntar, as fases 1 a 6 continuam com saída", todasOk);
   confere("combo x3 vale 300", R.pontosDoTrio(3) === 300);
   confere("bônus de 10 s vale 50", R.bonusDeTempo(10) === 50);
 }
