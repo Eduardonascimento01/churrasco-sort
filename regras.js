@@ -192,25 +192,29 @@
   // espeto, ..., milho, coxa...), então cada tipo continua múltiplo de 3.
   const GRELHAS = 15;
   const NIVEIS = {
-    facil:   { nome: "Fácil",   tiposBase: 6, vagasBase: 9, vagasMin: 5, bandejaBase: 6,  bandejaPorFase: 3, tempoX: 1.6 },
-    medio:   { nome: "Médio",   tiposBase: 7, vagasBase: 7, vagasMin: 3, bandejaBase: 9,  bandejaPorFase: 4, tempoX: 1.0 },
-    dificil: { nome: "Difícil", tiposBase: 8, vagasBase: 5, vagasMin: 2, bandejaBase: 12, bandejaPorFase: 5, tempoX: 0.7 },
+    facil:   { nome: "Fácil",   tiposBase: 6, vagasBase: 9, vagasMin: 5, bandejaBase: 6,  bandejaPorFase: 3, tempoX: 1.6, espalhar: 5 },
+    medio:   { nome: "Médio",   tiposBase: 7, vagasBase: 7, vagasMin: 3, bandejaBase: 9,  bandejaPorFase: 4, tempoX: 1.0, espalhar: 12 },
+    dificil: { nome: "Difícil", tiposBase: 8, vagasBase: 5, vagasMin: 2, bandejaBase: 12, bandejaPorFase: 5, tempoX: 0.7, espalhar: 24 },
   };
   //   tiposBase   = tipos de comida na fase 1 (+1 a cada 2 fases, até 12)
   //   vagas       = vagas na fase 1, perdendo 1 a cada 2 fases, até o mínimo
   //   bandeja...  = comidas escondidas nas bandejas na fase 1, e quantas a mais por fase
   //   tempoX      = multiplica o cronômetro (1,6 = 60% mais tempo)
+  //   espalhar    = o quanto as 3 cópias de uma comida se espalham pelas camadas (mais = mais difícil)
   const TETO_BANDEJA = 75; // acima disso o solucionador demora demais para provar a fase
+  const TETO_TIPOS = 30;   // das 40 comidas, até 30 numa fase só (as "parecidas" não podem ir juntas)
   function receita(fase, nivel = "medio") {
     const n = NIVEIS[nivel] || NIVEIS.medio;
-    // Teto de 12 tipos na mesma fase: mais que isso o solucionador demora e o olho cansa.
-    const tipos = Math.min(n.tiposBase + Math.floor((fase - 1) / 2), 12);
-    const nomes = cardapio(fase, nivel, tipos);
     const grelhas = GRELHAS;
     const vagas = Math.max(n.vagasMin, n.vagasBase - Math.floor(fase / 2));
     const naBandeja = Math.min(n.bandejaBase + (fase - 1) * n.bandejaPorFase, TETO_BANDEJA);
     const trios = Math.ceil((grelhas * 3 - vagas + naBandeja) / 3); // total de trios da fase
     const comidas = trios * 3;
+    // DIVERSIDADE (pedido do Eduardo, 2026-11-17): uma comida diferente para
+    // CADA trio. Assim cada comida aparece só 3 vezes na fase, não 6 ou 9.
+    // Só quando a fase tem mais trios que o teto é que alguma repete.
+    const tipos = Math.min(trios, TETO_TIPOS);
+    const nomes = cardapioDaFase(fase, nivel, tipos);
     // Segundos por comida: começa em 6 e cai 7% (do que sobra acima de 1,5) a
     // cada fase. É uma curva que SEMPRE desce, mas nunca chega a 1,5:
     // fase 1 = 6 s, fase 10 ≈ 3,8 s, fase 20 ≈ 2,6 s, fase 40 ≈ 1,8 s.
@@ -235,54 +239,108 @@
   ];
   const conflita = (a, b) => PARECIDAS.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
 
-  function cardapio(fase, nivel, tipos) {
+  // `evitar` = comidas da fase anterior. Elas vão para o FIM da fila: só
+  // entram se as comidas "novas" não bastarem. Assim duas fases seguidas
+  // ficam com cardápios o mais diferentes possível.
+  function cardapio(fase, nivel, tipos, evitar = []) {
     const sortear = sorteador(Object.keys(NIVEIS).indexOf(nivel) * 7777 + fase * 31 + 5);
-    const filas = Object.values(GRUPOS).map((g) => embaralhar(Object.keys(g), sortear));
-    embaralhar(filas, sortear);                 // qual grupo começa também é sorteado
+    const fora = new Set(evitar);
     const escolhidas = [];
-    for (let i = 0; escolhidas.length < tipos && i < 500; i++) {
-      const fila = filas[i % filas.length];
-      // Tira da fila até achar uma que não se pareça com nenhuma já escolhida.
-      while (fila.length) {
-        const nome = fila.pop();
-        if (!escolhidas.some((e) => conflita(e, nome))) { escolhidas.push(nome); break; }
+    // 1ª rodada: só comidas que NÃO estavam na fase anterior. 2ª: as que estavam.
+    for (const rodada of [(nome) => !fora.has(nome), (nome) => fora.has(nome)]) {
+      const filas = Object.values(GRUPOS).map((g) => embaralhar(Object.keys(g).filter(rodada), sortear));
+      embaralhar(filas, sortear);               // qual grupo começa também é sorteado
+      for (let i = 0; escolhidas.length < tipos && filas.some((f) => f.length); i++) {
+        const fila = filas[i % filas.length];
+        // Tira da fila até achar uma que não se pareça com nenhuma já escolhida.
+        while (fila.length) {
+          const nome = fila.pop();
+          if (!escolhidas.some((e) => conflita(e, nome))) { escolhidas.push(nome); break; }
+        }
       }
     }
     return escolhidas;
   }
 
+  // O cardápio da fase N depende do da fase N−1 (para fugir dele), que
+  // depende do da N−2... Guardamos cada um já calculado num "caderninho"
+  // (memo) para não refazer a mesma conta toda hora.
+  const memoCardapio = {};
+  function cardapioDaFase(fase, nivel, tipos) {
+    const chave = `${nivel}:${fase}`;
+    if (!memoCardapio[chave]) {
+      const anterior = fase > 1 ? receita(fase - 1, nivel).nomes : [];
+      memoCardapio[chave] = cardapio(fase, nivel, tipos, anterior);
+    }
+    return memoCardapio[chave];
+  }
+
   // Monta uma fase com o sorteio: coloca as comidas na frente (deixando as
   // vagas) e o que sobra vai, de 3 em 3, para as bandejas das grelhas.
+  //
+  // VERSÃO 2 (com a diversidade): cada comida aparece só 3 vezes, então
+  // embaralhar tudo às cegas espalhava as 3 cópias por camadas distantes
+  // (uma na frente, outra 5 camadas atrás) e a fase TRAVAVA. Agora:
+  //   1. Os trios fazem uma FILA. As 3 cópias de cada trio ficam PERTO
+  //      umas das outras na fila (só se espalham um pouco: `espalhar`).
+  //   2. A fila enche a mesa por PROFUNDIDADE: primeiro a frente (em
+  //      lugares sorteados), depois a 1ª camada das bandejas, depois a 2ª...
+  // Resultado: as 3 cópias de uma comida ficam na mesma profundidade ou
+  // em vizinhas. Analogia: embaralhar o baralho "por montinhos", e não
+  // jogar as cartas para o alto.
   function montar(r, sortear) {
-    const comidas = [];
-    for (let t = 0; t < r.trios; t++)                 // rodízio de tipos, 3 de cada vez
-      for (let i = 0; i < 3; i++) comidas.push(r.nomes[t % r.tipos]);
-    embaralhar(comidas, sortear);
+    const n = NIVEIS[r.nivel] || NIVEIS.medio;
+    const trios = [];
+    for (let t = 0; t < r.trios; t++) trios.push(r.nomes[t % r.tipos]);
+    embaralhar(trios, sortear);
 
-    // Frente: escolhe quais lugares ficam vazios.
-    const totalFrente = r.grelhas * 3;
-    const vazios = new Set(embaralhar([...Array(totalFrente).keys()], sortear).slice(0, r.vagas));
+    // 1. A fila: cada cópia ganha uma "senha" = posição do trio + um tanto sorteado.
+    const itens = [];
+    trios.forEach((tipo, i) => {
+      for (let k = 0; k < 3; k++) itens.push({ tipo, senha: i * 3 + sortear() * n.espalhar });
+    });
+    itens.sort((a, b) => a.senha - b.senha);
+    const fila = itens.map((x) => x.tipo);
+
+    // 2a. A frente: lugares sorteados, deixando as vagas.
     const grelhas = [];
-    for (let g = 0; g < r.grelhas; g++) {
-      const frente = [];
-      for (let l = 0; l < 3; l++) {
-        const pos = g * 3 + l;
-        frente.push(vazios.has(pos) || comidas.length === 0 ? null : comidas.pop());
+    for (let g = 0; g < r.grelhas; g++) grelhas.push([VAZIA()]);
+    const lugaresFrente = embaralhar([...Array(r.grelhas * 3).keys()], sortear).slice(r.vagas);
+    for (const pos of lugaresFrente) if (fila.length) grelhas[Math.floor(pos / 3)][0][pos % 3] = fila.shift();
+
+    // 2b. As bandejas, uma profundidade de cada vez.
+    while (fila.length) {
+      const quantas = Math.min(r.grelhas, Math.ceil(fila.length / 3));
+      const escolhidas = embaralhar([...Array(r.grelhas).keys()], sortear).slice(0, quantas);
+      const camadas = escolhidas.map(() => VAZIA());
+      for (const pos of embaralhar([...Array(quantas * 3).keys()], sortear)) {
+        if (fila.length) camadas[Math.floor(pos / 3)][pos % 3] = fila.shift();
       }
-      grelhas.push([frente]);
+      escolhidas.forEach((g, i) => grelhas[g].push(camadas[i]));
     }
 
-    // Bandejas: o resto, em camadas de 3, sempre na grelha com MENOS camadas
-    // (empate: sorteia). Assim nenhuma grelha fica com uma torre enorme.
-    while (comidas.length > 0) {
-      const camada = [comidas.pop() ?? null, comidas.pop() ?? null, comidas.pop() ?? null];
-      const menor = Math.min(...grelhas.map((p) => p.length));
-      const candidatas = grelhas.filter((p) => p.length === menor);
-      candidatas[Math.floor(sortear() * candidatas.length)].push(embaralhar(camada, sortear));
+    // 3. Nenhuma camada pode nascer com trio pronto: troca uma comida com
+    //    outra camada da MESMA profundidade (ou o trio sairia "de graça").
+    for (let volta = 0; volta < 50; volta++) {
+      let consertou = false;
+      grelhas.forEach((p, g) => p.forEach((c, d) => {
+        if (c[0] !== null && c[0] === c[1] && c[1] === c[2]) {
+          const outras = grelhas.map((q, h) => (h !== g && q[d] ? h : -1)).filter((h) => h >= 0);
+          if (!outras.length) return;
+          const h = outras[Math.floor(sortear() * outras.length)];
+          const l = Math.floor(sortear() * 3);
+          [c[0], grelhas[h][d][l]] = [grelhas[h][d][l], c[0]];
+          consertou = true;
+        }
+      }));
+      if (!consertou) break;
     }
 
-    // Arrumação: uma frente vazia com bandeja atrás não faz sentido; a bandeja sobe.
-    for (const p of grelhas) while (p.length > 1 && camadaVazia(p[0])) p.shift();
+    // Arrumação: camada vazia sai da fila; frente vazia com bandeja atrás, a bandeja sobe.
+    for (const p of grelhas) {
+      for (let i = p.length - 1; i >= 1; i--) if (camadaVazia(p[i])) p.splice(i, 1);
+      while (p.length > 1 && camadaVazia(p[0])) p.shift();
+    }
     return grelhas;
   }
 

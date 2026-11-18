@@ -160,6 +160,20 @@ for (const nivel of Object.keys(R.NIVEIS)) {
   confere("nenhuma fase junta comidas parecidas (ex.: 🍑 e 🍅), e o cardápio vem completo", semParecidas);
   confere("todo cardápio mistura os 5 grupos", misturado);
   confere("fases seguidas têm cardápios diferentes", iguaisSeguidas === 0);
+  // Diversidade (pedido do Eduardo): cada comida só 3 vezes, e fases seguidas sem repetir.
+  let cadaUmaTres = true, poucoEmComum = true;
+  for (const nivel of Object.keys(R.NIVEIS))
+    for (let n = 1; n <= 10; n++) {
+      const r = R.receita(n, nivel), r2 = R.receita(n + 1, nivel);
+      if (r.tipos === r.trios) {
+        const conta = R.contar(R.gerarFase(n, nivel).grelhas);
+        if (!Object.values(conta).every((q) => q === 3)) cadaUmaTres = false;
+      }
+      const comuns = r.nomes.filter((x) => r2.nomes.includes(x)).length;
+      if (comuns > Math.max(0, r.tipos + r2.tipos - 33)) poucoEmComum = false; // 33 = comidas que podem ir juntas
+    }
+  confere("cada comida aparece só 3 vezes na fase (1 trio)", cadaUmaTres);
+  confere("fases seguidas só repetem comida quando não tem como evitar", poucoEmComum);
   confere("o cardápio de uma fase é sempre o mesmo", JSON.stringify(R.receita(7, "medio").nomes) === JSON.stringify(R.receita(7, "medio").nomes));
 }
 
