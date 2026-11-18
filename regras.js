@@ -20,21 +20,31 @@
   const LUGARES = 3;
   const VAZIA = () => [null, null, null];
 
-  // 12 comidas. As fases fáceis usam só as primeiras; as difíceis, mais.
-  const COMIDAS = {
-    milho: "🌽",
-    coxa: "🍗",
-    espeto: "🍢",
-    pimentao: "🫑",
-    salsicha: "🌭",
-    costela: "🍖",
-    cebola: "🧅",
-    berinjela: "🍆",
-    queijo: "🧀",
-    cogumelo: "🍄",
-    camarao: "🍤",
-    picanha: "🥩",
+  // O CARDÁPIO: 40 comidas, em 5 grupos. Cada fase SORTEIA as suas
+  // (veja `cardapio` mais abaixo), então cada fase tem uma mesa diferente.
+  const GRUPOS = {
+    carnes: {
+      coxa: "🍗", costela: "🍖", picanha: "🥩", salsicha: "🌭", bacon: "🥓",
+      espeto: "🍢", hamburguer: "🍔", ovo: "🥚",
+    },
+    marinhos: {
+      camarao: "🍤", peixe: "🐟", lula: "🦑", lagosta: "🦞", caranguejo: "🦀", ostra: "🦪",
+    },
+    legumes: {
+      milho: "🌽", pimentao: "🫑", cebola: "🧅", berinjela: "🍆", cogumelo: "🍄",
+      tomate: "🍅", batata: "🥔", cenoura: "🥕", alho: "🧄", brocolis: "🥦",
+      pepino: "🥒", pimenta: "🌶️", batatadoce: "🍠",
+    },
+    frutas: {
+      abacaxi: "🍍", banana: "🍌", limao: "🍋", manga: "🥭", pessego: "🍑", coco: "🥥",
+    },
+    paes: {
+      queijo: "🧀", pao: "🍞", baguete: "🥖", pretzel: "🥨", taco: "🌮",
+      pizza: "🍕", sanduiche: "🥪",
+    },
   };
+  // Junta os grupos numa lista só: { coxa: "🍗", costela: "🍖", ... }
+  const COMIDAS = Object.assign({}, ...Object.values(GRUPOS));
 
   // Fase da etapa 3, montada à mão: 4 tipos × 3 = 12 comidas em 4 grelhas,
   // algumas escondidas na bandeja. O teste.js prova que ela tem solução.
@@ -193,8 +203,9 @@
   const TETO_BANDEJA = 75; // acima disso o solucionador demora demais para provar a fase
   function receita(fase, nivel = "medio") {
     const n = NIVEIS[nivel] || NIVEIS.medio;
-    const nomes = Object.keys(COMIDAS);
-    const tipos = Math.min(n.tiposBase + Math.floor((fase - 1) / 2), nomes.length);
+    // Teto de 12 tipos na mesma fase: mais que isso o solucionador demora e o olho cansa.
+    const tipos = Math.min(n.tiposBase + Math.floor((fase - 1) / 2), 12);
+    const nomes = cardapio(fase, nivel, tipos);
     const grelhas = GRELHAS;
     const vagas = Math.max(n.vagasMin, n.vagasBase - Math.floor(fase / 2));
     const naBandeja = Math.min(n.bandejaBase + (fase - 1) * n.bandejaPorFase, TETO_BANDEJA);
@@ -206,7 +217,38 @@
     // (Um "piso" fixo faria as fases pararem de ficar difíceis: o teste pegou isso.)
     const porComida = 1.5 + 4.5 * Math.pow(0.93, fase - 1);
     const tempo = Math.round((comidas * porComida + 30) * n.tempoX);
-    return { tipos, trios, grelhas, vagas, comidas, tempo, nivel, nomes: nomes.slice(0, tipos) };
+    return { tipos, trios, grelhas, vagas, comidas, tempo, nivel, nomes };
+  }
+
+  // Sorteia o cardápio da fase: `tipos` comidas diferentes, misturando os
+  // grupos (carnes, frutos do mar, legumes, frutas, pães). Usa o sorteador
+  // COM SEMENTE, então a fase 7 do Médio tem sempre o mesmo cardápio.
+  // Para variar de verdade, o sorteio "dá as cartas" passando pelos grupos
+  // em rodízio: 1 carne, 1 marinho, 1 legume, 1 fruta, 1 pão, de novo...
+  // Assim nunca sai uma fase só de legumes verdes parecidos.
+  //
+  // PARECIDAS: comidas que, pequenas na tela do celular, se confundem.
+  // Elas nunca caem na mesma fase (o print do celular mostrou 🍑 e 🍅 juntos).
+  const PARECIDAS = [
+    ["tomate", "pessego"], ["coco", "ostra"], ["batatadoce", "baguete"],
+    ["limao", "manga"], ["batata", "ovo"], ["coxa", "costela"], ["picanha", "bacon"],
+  ];
+  const conflita = (a, b) => PARECIDAS.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+
+  function cardapio(fase, nivel, tipos) {
+    const sortear = sorteador(Object.keys(NIVEIS).indexOf(nivel) * 7777 + fase * 31 + 5);
+    const filas = Object.values(GRUPOS).map((g) => embaralhar(Object.keys(g), sortear));
+    embaralhar(filas, sortear);                 // qual grupo começa também é sorteado
+    const escolhidas = [];
+    for (let i = 0; escolhidas.length < tipos && i < 500; i++) {
+      const fila = filas[i % filas.length];
+      // Tira da fila até achar uma que não se pareça com nenhuma já escolhida.
+      while (fila.length) {
+        const nome = fila.pop();
+        if (!escolhidas.some((e) => conflita(e, nome))) { escolhidas.push(nome); break; }
+      }
+    }
+    return escolhidas;
   }
 
   // Monta uma fase com o sorteio: coloca as comidas na frente (deixando as
@@ -355,7 +397,7 @@
 
   const Regras = {
     removerTrio, tipoMaisVisivel, pontosDoTrio, bonusDeTempo,
-    LUGARES, COMIDAS, NIVEIS, criarFase, frente, camadaVazia, temTrio,
+    LUGARES, COMIDAS, GRUPOS, NIVEIS, PARECIDAS, cardapio, criarFase, frente, camadaVazia, temTrio,
     mover, limparSeTrio, venceu, contar, temSolucao, copiar,
     sorteador, embaralhar, receita, montar, resolver, gerarFase,
   };

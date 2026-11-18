@@ -21,6 +21,7 @@ Jogo de juntar 3 comidas iguais na mesma grelha. Feito do zero, em HTML e JavaSc
 | `teste.js` | Confere as regras sem navegador e RESOLVE a fase sozinho, provando que ela tem saída: `node teste.js` |
 
 ## Etapas
+- [x] Extra: cardápio de 40 comidas em 5 grupos (carnes, frutos do mar, legumes, frutas, pães), sorteado por fase, sem comidas parecidas juntas
 - [x] Extra: 15 grelhas (3 × 5), todas com comida desde a fase 01, que se ajustam ao tamanho da tela (PC e celular), arrasto mais suave e 3 níveis de dificuldade
 - [x] 1. Dados e regra do trio
 - [x] 2. Arrastar com mouse e dedo

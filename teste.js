@@ -136,6 +136,33 @@ for (const nivel of Object.keys(R.NIVEIS)) {
   confere(`${nivel} fase 01: nenhuma grelha começa vazia`, f.every((p) => !R.camadaVazia(R.frente(p))));
 }
 
+// ---- Cardápio variado ----
+{
+  confere("40 comidas no cardápio", Object.keys(R.COMIDAS).length === 40);
+  const grupoDe = {};
+  for (const [g, itens] of Object.entries(R.GRUPOS)) for (const nome of Object.keys(itens)) grupoDe[nome] = g;
+  let semRepetir = true, misturado = true, iguaisSeguidas = 0;
+  for (const nivel of Object.keys(R.NIVEIS))
+    for (let n = 1; n <= 20; n++) {
+      const a = R.receita(n, nivel).nomes, b = R.receita(n + 1, nivel).nomes;
+      if (new Set(a).size !== a.length) semRepetir = false;
+      if (new Set(a.map((x) => grupoDe[x])).size < Math.min(5, a.length)) misturado = false;
+      if (JSON.stringify(a) === JSON.stringify(b)) iguaisSeguidas++;
+    }
+  confere("nenhum cardápio repete comida", semRepetir);
+  let semParecidas = true;
+  for (const nivel of Object.keys(R.NIVEIS))
+    for (let n = 1; n <= 40; n++) {
+      const c = R.receita(n, nivel).nomes;
+      if (R.PARECIDAS.some(([x, y]) => c.includes(x) && c.includes(y))) semParecidas = false;
+      if (c.length !== R.receita(n, nivel).tipos) semParecidas = false;
+    }
+  confere("nenhuma fase junta comidas parecidas (ex.: 🍑 e 🍅), e o cardápio vem completo", semParecidas);
+  confere("todo cardápio mistura os 5 grupos", misturado);
+  confere("fases seguidas têm cardápios diferentes", iguaisSeguidas === 0);
+  confere("o cardápio de uma fase é sempre o mesmo", JSON.stringify(R.receita(7, "medio").nomes) === JSON.stringify(R.receita(7, "medio").nomes));
+}
+
 // ---- Etapa 6: poderes ----
 {
   let g = [[["milho", "coxa", null], ["milho", "milho", "coxa"]], [["coxa", null, null]]];
