@@ -1,4 +1,10 @@
-// jogo.js · A "tela": desenha as grelhas e responde ao mouse e ao dedo.
+// jogo.js · A "tela" do Trio na Grelha (ex-Churrasco Sort): desenha as grelhas
+// e responde ao mouse e ao dedo.
+//
+// 2026-11-24: nível escolhido no painel (seletor "Nível", igual aos outros
+//           jogos da Jogoteca) em vez do menu por cima; celular deitado em
+//           2 colunas (controles | grelhas), com o nº de colunas de grelhas
+//           escolhido para as comidas ficarem do maior tamanho possível.
 // Quem decide se a jogada vale é sempre o regras.js. Aqui só mostramos.
 //
 // Etapa 6+: 12 grelhas que se ajustam ao tamanho da tela, arrasto mais
@@ -19,11 +25,10 @@
   const aviso = $("aviso");
   const contador = $("contador");
   const titulo = $("fase");
-  const nivelNome = $("nivel-nome");
+  const seletorNivel = $("nivel");
   const relogioTela = $("relogio");
   const botaoProxima = $("proxima");
   const botaoDesfazer = $("desfazer");
-  const menu = $("menu");
   const botoesPoder = { congelar: $("p-congelar"), martelo: $("p-martelo"), juntar: $("p-juntar") };
 
   const DESFAZER_POR_FASE = 3;
@@ -48,7 +53,7 @@
   let escolhida, jogadas, ocupado, arraste, ignorarClique = false;
   let tempo, relogio = null, historico, desfazeres, terminou;
   let pontos, combo, ultimoTrio, poderes, congelado = 0, modoMartelo = false;
-  let menuAberto = false;
+  const menuAberto = false; // (o menu de níveis saiu; o nível agora fica no painel)
 
   const doisDigitos = (n) => String(n).padStart(2, "0"); // 1 → "01"
 
@@ -64,7 +69,7 @@
     gravar("fase:" + nivel, n);
     pararRelogio();
     titulo.textContent = `Fase ${doisDigitos(n)}`;
-    nivelNome.textContent = R.NIVEIS[nivel].nome;
+    seletorNivel.value = nivel;
     botaoProxima.hidden = true;
     ocupado = true;
     aviso.textContent = "🔥 Preparando a fase...";
@@ -112,20 +117,38 @@
   //   1 grelha de largura = 3 lugares + 2 vãos (0,06) + 2 margens (0,1) = 3,32 lados
   //   a mesa de largura   = 3 grelhas + 2 vãos (0,18)                  = 10,32 lados
   //   1 bloco de altura   = lugar + margens + bandeja ≈ 1,62 lado + 8 px
-  function ajustarTamanho() {
-    if (!grelhas) return;
-    const colunas = 3;
+  // Celular DEITADO (tela baixa e larga): a coluna da esquerda (.lateral) tem
+  // os controles e a mesa fica à direita. Aí testamos de 3 a 6 colunas de
+  // grelhas e ficamos com a que deixa o --lado MAIOR (comidas maiores).
+  const telaDeitada = () => window.matchMedia("(orientation: landscape) and (max-height: 560px)").matches;
+  function ladoPara(colunas, larguraLivre, alturaLivre) {
     const linhas = Math.ceil(grelhas.length / colunas);
-    const estilo = getComputedStyle(document.body);
-    const folgaVertical = parseFloat(estilo.paddingTop) + parseFloat(estilo.paddingBottom) + parseFloat(estilo.rowGap || 8) * 4;
-    const outros = ["topo", "poderes", "aviso", "botoes"].reduce((soma, id) => soma + $(id).offsetHeight, 0);
-    const alturaLivre = window.innerHeight - outros - folgaVertical - 4;
-    const larguraLivre = Math.min(document.documentElement.clientWidth - 24, 820);
-
     const pelaLargura = larguraLivre / (colunas * 3.32 + (colunas - 1) * 0.18);
     const pelaAltura = (alturaLivre - linhas * 8) / (linhas * 1.62 + (linhas - 1) * 0.14);
-    const lado = Math.max(26, Math.min(88, Math.floor(Math.min(pelaLargura, pelaAltura))));
-    mesa.style.setProperty("--lado", lado + "px");
+    return Math.floor(Math.min(pelaLargura, pelaAltura));
+  }
+  function ajustarTamanho() {
+    if (!grelhas) return;
+    const estilo = getComputedStyle(document.body);
+    let colunas = 3, lado;
+    if (telaDeitada()) {
+      const alturaLivre = window.innerHeight - parseFloat(estilo.paddingTop) - parseFloat(estilo.paddingBottom) - 6;
+      const larguraLivre = document.documentElement.clientWidth - $("lateral").offsetWidth
+        - parseFloat(estilo.paddingLeft) - parseFloat(estilo.paddingRight) - parseFloat(estilo.columnGap || 16) - 6;
+      lado = 0;
+      for (let c = 3; c <= 6; c++) {
+        const l = ladoPara(c, larguraLivre, alturaLivre);
+        if (l > lado) { lado = l; colunas = c; }
+      }
+    } else {
+      const folgaVertical = parseFloat(estilo.paddingTop) + parseFloat(estilo.paddingBottom) + parseFloat(estilo.rowGap || 8) * 4;
+      const outros = ["topo", "poderes", "aviso", "botoes"].reduce((soma, id) => soma + $(id).offsetHeight, 0);
+      const alturaLivre = window.innerHeight - outros - folgaVertical - 4;
+      const larguraLivre = Math.min(document.documentElement.clientWidth - 24, 820);
+      lado = ladoPara(colunas, larguraLivre, alturaLivre);
+    }
+    mesa.style.gridTemplateColumns = "repeat(" + colunas + ", auto)";
+    mesa.style.setProperty("--lado", Math.max(26, Math.min(88, lado)) + "px");
   }
   window.addEventListener("resize", ajustarTamanho);
   window.addEventListener("orientationchange", () => setTimeout(ajustarTamanho, 200));
@@ -517,40 +540,18 @@
   }
 
   // =====================================================================
-  // MENU DE NÍVEIS
+  // NÍVEL (seletor no painel, igual aos outros jogos da Jogoteca)
   // =====================================================================
-  function abrirMenu(podeVoltar) {
-    menuAberto = true;
-    limparArraste();
-    const cont = $("continuar");
-    cont.innerHTML = "";
-    for (const [chave, n] of Object.entries(R.NIVEIS)) {
-      const salva = faseSalva(chave);
-      if (salva > 1) {
-        const b = document.createElement("button");
-        b.textContent = `ou continuar o ${n.nome} da fase ${doisDigitos(salva)}`;
-        b.addEventListener("click", () => escolherNivel(chave, salva));
-        cont.appendChild(b);
-      }
-    }
-    $("fechar-menu").hidden = !podeVoltar;
-    menu.hidden = false;
-    menu.querySelector(`[data-nivel="${nivel}"]`).focus();
-  }
-  function fecharMenu() {
-    menuAberto = false;
-    menu.hidden = true;
-  }
-  function escolherNivel(nv, comecarEm = 1) {
+  // Trocar o nível continua da fase em que você parou NAQUELE nível
+  // (cada nível guarda o seu progresso e os seus recordes).
+  seletorNivel.addEventListener("change", () => {
+    const nv = seletorNivel.value;
+    if (!R.NIVEIS[nv]) return;
     nivel = nv;
     gravar("nivel", nv);
-    fecharMenu();
-    carregarFase(comecarEm);
-  }
-  menu.querySelectorAll("[data-nivel]").forEach((b) => b.addEventListener("click", () => escolherNivel(b.dataset.nivel, 1)));
-  $("fechar-menu").addEventListener("click", fecharMenu);
-  $("abrir-menu").addEventListener("click", () => abrirMenu(true));
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && menuAberto && !$("fechar-menu").hidden) fecharMenu(); });
+    limparArraste();
+    carregarFase(faseSalva(nv));
+  });
 
   // =====================================================================
   // BOTÕES E INÍCIO
@@ -570,11 +571,11 @@
   mostrarSom();
 
   // ?fase=N&nivel=facil no endereço abre direto (útil para testar).
-  // Sem isso, o jogo abre no menu de níveis.
+  // Sem isso, o jogo abre direto no último nível usado, na fase em que parou.
   const pedido = new URLSearchParams(location.search);
   const pedida = parseInt(pedido.get("fase"), 10);
   if (R.NIVEIS[pedido.get("nivel")]) nivel = pedido.get("nivel");
   if (!R.NIVEIS[nivel]) nivel = "medio";
-  if (pedida > 0) carregarFase(pedida);
-  else abrirMenu(false);
+  seletorNivel.value = nivel;
+  carregarFase(pedida > 0 ? pedida : faseSalva(nivel));
 })();

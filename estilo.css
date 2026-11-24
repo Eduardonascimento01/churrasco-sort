@@ -221,41 +221,66 @@ header p { margin: 2px 0 0; color: var(--texto-suave); font-size: clamp(.8rem, 3
 #proxima[hidden] { display: none; }
 button:disabled { opacity: .4; cursor: not-allowed; }
 
-/* Menu de dificuldade */
-.menu {
-  position: fixed; inset: 0;
-  display: grid; place-items: center;
-  padding: 16px;
-  background: rgba(15, 23, 42, .55);
-  z-index: 50;
-}
-.menu[hidden] { display: none; }
-.cartao {
-  width: min(420px, 100%);
+/* Painel de cima: igual aos outros jogos da Jogoteca (seletor de nível + botão) */
+.painel {
   background: #fff;
-  border-radius: 18px;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 20px 50px rgba(0,0,0,.25);
-}
-.cartao h2 { margin: 0 0 14px; color: var(--azul); font-size: 1.3rem; }
-.niveis { display: grid; gap: 10px; }
-.niveis button {
-  display: grid; gap: 2px;
-  padding: 12px;
+  border: 1px solid var(--borda);
   border-radius: 14px;
-  border: 2px solid var(--azul-claro);
-  background: var(--fundo);
-  cursor: pointer;
-  font-size: 1.05rem;
-  color: var(--azul);
+  padding: 6px 12px;
+  margin: 6px auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
 }
-.niveis button:hover, .niveis button:focus-visible { border-color: var(--azul); background: var(--azul-claro); }
-.niveis small { color: var(--texto-suave); font-size: .82rem; }
-.dica { color: var(--texto-suave); font-size: .9rem; margin: 14px 0 8px; }
-#continuar { display: grid; gap: 6px; }
-#continuar button, .discreto {
-  border: none; background: none; color: var(--azul); text-decoration: underline; cursor: pointer; font-size: .9rem; padding: 4px;
+.painel label { font-weight: 600; font-size: 14px; display: flex; gap: 8px; align-items: center; color: var(--texto); }
+.painel select, .painel button {
+  font: inherit;
+  font-size: 15px;
+  border-radius: 999px;
+  border: 1px solid #C9CED6;
+  padding: 6px 14px;
+  background: #fff;
+  color: var(--texto);
+  cursor: pointer;
+}
+.btn-primario { background: var(--azul) !important; border-color: var(--azul) !important; color: #fff !important; font-weight: 600; }
+.btn-primario:hover { background: var(--azul-escuro) !important; }
+
+/* .lateral: em pé "finge que não existe" (display: contents) e a ordem
+   na tela fica: título/painel, GRELHAS, poderes, aviso e botões. */
+.lateral { display: contents; }
+#topo { order: 0; }
+#mesa { order: 1; }
+#poderes, #aviso, #botoes { order: 2; }
+
+/* ---------- Celular/tablet DEITADO (tela baixa e larga) ----------
+   Duas colunas: controles à esquerda (.lateral) e grelhas à direita.
+   O jogo.js escolhe quantas colunas de grelhas cabem melhor (3 a 6). */
+@media (orientation: landscape) and (max-height: 560px) {
+  body {
+    display: grid;
+    grid-template-columns: 210px auto;
+    justify-content: center;
+    align-items: center;
+    column-gap: 14px;
+    padding: 8px 10px;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .lateral { display: flex; flex-direction: column; align-items: center; gap: 6px; grid-column: 1; }
+  #mesa { grid-column: 2; }
+  h1 { font-size: 1.1rem; }
+  header p { font-size: .8rem; }
+  .painel { padding: 6px 8px; gap: 6px; }
+  .painel select, .painel button { font-size: 13px; padding: 4px 10px; }
+  .poderes { flex-direction: column; align-items: stretch; gap: 4px; }
+  .poderes button { justify-content: space-between; font-size: .8rem; padding: 4px 8px; }
+  #aviso { font-size: .8rem; }
+  .botoes button { font-size: .8rem; padding: 5px 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

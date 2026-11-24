@@ -1,8 +1,10 @@
-# 🔥 Churrasco Sort
+# 🔥 Trio na Grelha (antigo Churrasco Sort)
 
 Jogo de juntar 3 comidas iguais na mesma grelha. Feito do zero, em HTML e JavaScript puro, responsivo (PC e celular), uma etapa por vez, para aprender como esse tipo de jogo funciona por dentro.
 
 **Jogar:** https://eduardonascimento01.github.io/churrasco-sort/
+
+**Também na Jogoteca:** https://jogoteca-two.vercel.app/jogar/trio-na-grelha (desde 2026-11-24). O nível é escolhido no painel de cima, igual aos outros jogos, e com o celular deitado o jogo usa duas colunas.
 
 ## Como jogar
 0. Escolha a dificuldade (😊 Fácil, 🙂 Médio, 😈 Difícil). Todo nível começa na **fase 01**, e cada fase é mais difícil que a anterior.

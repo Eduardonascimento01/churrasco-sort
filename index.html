@@ -3,19 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Churrasco Sort</title>
+  <title>Trio na Grelha</title>
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
+  <!-- .lateral junta tudo que não é a mesa. Em pé ela "some" (display: contents);
+       com o celular deitado vira a coluna da esquerda. -->
+  <div class="lateral" id="lateral">
   <header id="topo">
-    <h1>🔥 Churrasco Sort <button id="som" class="som" aria-label="Desligar som">🔊</button></h1>
+    <h1>🔥 Trio na Grelha <button id="som" class="som" aria-label="Desligar som">🔊</button></h1>
+    <!-- Igual aos outros jogos da Jogoteca: o nível fica aqui, no painel -->
+    <div class="painel">
+      <label>Nível
+        <select id="nivel" aria-label="Nível">
+          <option value="facil">Fácil</option>
+          <option value="medio">Médio</option>
+          <option value="dificil">Difícil</option>
+        </select>
+      </label>
+      <button id="recomecar" class="btn-primario">↻ Recomeçar</button>
+    </div>
     <p>
-      <strong id="fase">Fase 01</strong> <span id="nivel-nome" class="etiqueta">Médio</span> ·
+      <strong id="fase">Fase 01</strong> ·
       <span id="relogio" aria-live="off">⏱ 0:00</span> · <span id="contador"></span>
     </p>
   </header>
-
-  <main id="mesa" aria-label="Grelhas"></main>
 
   <div class="poderes" id="poderes" aria-label="Poderes">
     <button id="p-congelar" title="Para o relógio por 10 segundos">❄️ Congelar <b>1</b></button>
@@ -27,24 +39,11 @@
   <div class="botoes" id="botoes">
     <button id="proxima" hidden>Próxima fase ➜</button>
     <button id="desfazer" disabled>↶ Desfazer (3)</button>
-    <button id="recomecar">↻ Recomeçar</button>
-    <button id="abrir-menu">☰ Níveis</button>
   </div>
 
-  <!-- Menu de dificuldade: aparece ao abrir o jogo e no botão "Níveis" -->
-  <section id="menu" class="menu" role="dialog" aria-modal="true" aria-labelledby="menu-titulo" hidden>
-    <div class="cartao">
-      <h2 id="menu-titulo">🔥 Escolha a dificuldade</h2>
-      <div class="niveis">
-        <button data-nivel="facil"><strong>😊 Fácil</strong><small>Mais tempo e mais espaço livre</small></button>
-        <button data-nivel="medio"><strong>🙂 Médio</strong><small>O equilíbrio</small></button>
-        <button data-nivel="dificil"><strong>😈 Difícil</strong><small>Pouco tempo, quase sem espaço</small></button>
-      </div>
-      <p class="dica">Todo nível começa na <strong>fase 01</strong>. A cada fase, fica mais difícil.</p>
-      <div id="continuar"></div>
-      <button id="fechar-menu" class="discreto" hidden>Voltar ao jogo</button>
-    </div>
-  </section>
+  </div>
+
+  <main id="mesa" aria-label="Grelhas"></main>
 
   <script src="regras.js"></script>
   <script src="som.js"></script>
